@@ -1,0 +1,53 @@
+# Local development records and agent state
+/docs/
+/output/
+/tmp-dev/
+AGENTS.md
+CLAUDE.md
+MEMORY.md
+.agents/
+.codex/
+.zcode/
+.claude/
+.idea/
+.vscode/
+
+# Builds, test output, and runtime state
+/bin/
+/dist/
+/state/
+/data/
+/geo/
+*.exe
+*.exe~
+*.test
+*.out
+*.log
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.xdb
+coverage.*
+
+# Private configuration and credentials; examples remain public
+/haruka-agent.yml
+/haruka-agent.yaml
+/haruka-server.yml
+/haruka-server.yaml
+*.local.*
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Editor and operating system files
+*~
+*.swp
+*.tmp
+.DS_Store
+Thumbs.db
+__pycache__/

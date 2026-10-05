@@ -1,0 +1,16 @@
+{
+  "v": 1,
+  "device_id": "d_a1b2c3",
+  "device_kind": "android",
+  "sent_at": "2026-10-03T14:00:00Z",
+  "snapshot": true,
+  "events": [
+    {
+      "id": "e_3f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "seq": 910,
+      "ts": "2026-10-03T13:30:00Z",
+      "type": "location",
+      "data": { "source": "gps_coarse", "precision": "district", "country": "中国", "province": "上海", "city": "上海", "district": "徐汇区" }
+    }
+  ]
+}

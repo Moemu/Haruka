@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Haruka・遥 — 状态页</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/style.css">
+<link rel="stylesheet" href="/status.css">
+<script src="/status.js" defer></script>
+</head>
+<body class="mode-loading" data-status-src="/v1/public/status">
+<div class="blobs" aria-hidden="true"></div>
+
+<header class="site-head">
+  <div class="logo"><span class="logo-mark" aria-hidden="true">遥</span>Haruka・遥</div>
+  <p class="tagline">灯塔已点亮 · 状态遥遥同步中 ✧</p>
+</header>
+
+<main class="wrap">
+
+  <!-- 常规可见态 -->
+  <div id="page-normal">
+    <section class="hero">
+      <div class="hero-copy">
+        <h1 class="hero-title">遥遥在望<em>~!!</em></h1>
+        <p class="hero-sub">报信的少女从灯塔上看到了这些——</p>
+        <div class="banner" id="banner" data-state="offline">
+          <span class="dot" aria-hidden="true"></span>
+          <div class="banner-text">
+            <p class="banner-state" id="banner-state">正在连接灯塔…</p>
+            <p class="banner-meta" id="banner-meta"></p>
+          </div>
+        </div>
+      </div>
+      <div class="hero-art">
+        <svg viewBox="0 0 320 320" role="img" aria-label="灯塔上的报信少女（插画）">
+          <defs>
+            <radialGradient id="blob" cx="50%" cy="42%" r="60%">
+              <stop offset="0%" stop-color="#FBD9E6"/>
+              <stop offset="70%" stop-color="#EFD9F7"/>
+              <stop offset="100%" stop-color="#FCEBD4"/>
+            </radialGradient>
+            <linearGradient id="beamL" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stop-color="#FFE49A" stop-opacity=".85"/>
+              <stop offset="100%" stop-color="#FFE49A" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="beamR" x1="1" y1="1" x2="0" y2="0">
+              <stop offset="0%" stop-color="#FFE49A" stop-opacity=".85"/>
+              <stop offset="100%" stop-color="#FFE49A" stop-opacity="0"/>
+            </linearGradient>
+            <clipPath id="towerClip"><path d="M141 254 L149 118 L171 118 L179 254 Z"/></clipPath>
+          </defs>
+
+          <circle cx="160" cy="164" r="132" fill="url(#blob)"/>
+
+          <!-- 光束 -->
+          <g class="beam">
+            <path d="M150 100 L52 44 L74 118 Z" fill="url(#beamL)"/>
+            <path d="M170 100 L268 44 L246 118 Z" fill="url(#beamR)"/>
+          </g>
+
+          <!-- 星星 -->
+          <g fill="#F7CE68">
+            <path d="M62 84 l3.2 7 7 3.2 -7 3.2 -3.2 7 -3.2 -7 -7 -3.2 7 -3.2 Z"/>
+            <path d="M258 96 l2.6 5.6 5.6 2.6 -5.6 2.6 -2.6 5.6 -2.6 -5.6 -5.6 -2.6 5.6 -2.6 Z" fill="#B79BF0"/>
+            <path d="M236 190 l2.2 4.8 4.8 2.2 -4.8 2.2 -2.2 4.8 -2.2 -4.8 -4.8 -2.2 4.8 -2.2 Z" fill="#F2A9BE"/>
+          </g>
+          <circle cx="84" cy="150" r="4" fill="#B79BF0" opacity=".55"/>
+          <circle cx="244" cy="140" r="3" fill="#F2A9BE" opacity=".7"/>
+
+          <!-- 灯塔 -->
+          <g class="bob" stroke="#4A4160" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M141 254 L149 118 L171 118 L179 254 Z" fill="#FFFDF8"/>
+            <g clip-path="url(#towerClip)" stroke="none">
+              <rect x="130" y="140" width="60" height="20" fill="#F5A8C0"/>
+              <rect x="130" y="186" width="60" height="20" fill="#F5A8C0"/>
+              <rect x="130" y="232" width="60" height="20" fill="#F5A8C0"/>
+            </g>
+            <rect x="147" y="94" width="26" height="24" rx="5" fill="#FFF3D6"/>
+            <path d="M143 94 L160 70 L177 94 Z" fill="#E58CAD"/>
+            <line x1="160" y1="70" x2="160" y2="60"/>
+            <circle cx="160" cy="57" r="4" fill="#F7CE68"/>
+          </g>
+          <circle cx="160" cy="106" r="6" fill="#FFD66B" stroke="#4A4160" stroke-width="3"/>
+          <rect x="152" y="226" width="16" height="28" rx="7" fill="#B79BF0" stroke="#4A4160" stroke-width="4"/>
+          <rect x="152" y="156" width="8" height="12" rx="3" fill="#B79BF0" stroke="#4A4160" stroke-width="3"/>
+          <rect x="160" y="202" width="8" height="12" rx="3" fill="#F2A9BE" stroke="#4A4160" stroke-width="3"/>
+
+          <!-- 云与地面 -->
+          <g fill="#FFFFFF" opacity=".92">
+            <ellipse cx="96" cy="268" rx="46" ry="16"/>
+            <ellipse cx="130" cy="276" rx="34" ry="12"/>
+            <ellipse cx="238" cy="272" rx="40" ry="14"/>
+          </g>
+          <ellipse cx="160" cy="290" rx="104" ry="14" fill="#F2D8C8" opacity=".8"/>
+        </svg>
+      </div>
+    </section>
+
+    <section class="cards">
+      <article class="card" id="card-activity">
+        <h2><span class="chip chip-pink" aria-hidden="true">⚡</span>现在在干嘛</h2>
+        <p class="card-body" id="activity-text">…</p>
+        <p class="card-asof" id="activity-asof"></p>
+      </article>
+      <article class="card" id="card-location">
+        <h2><span class="chip chip-lavender" aria-hidden="true">📍</span>现在在哪</h2>
+        <p class="card-body" id="location-text">…</p>
+        <p class="card-asof" id="location-asof"></p>
+      </article>
+      <article class="card" id="card-mood">
+        <h2><span class="chip chip-mint" aria-hidden="true">♡</span>心情</h2>
+        <p class="card-body" id="mood-text">…</p>
+        <p class="card-asof" id="mood-asof"></p>
+      </article>
+      <article class="card card-ghost">
+        <h2><span class="chip chip-sun" aria-hidden="true">♥</span>健康</h2>
+        <p class="card-body">敬请期待…智能手表还要再等等 (´•ω•̥`)</p>
+      </article>
+    </section>
+
+    <footer class="site-foot">
+      <p id="footer-sync">正在连接灯塔…</p>
+      <p class="fine">powered by Haruka · 以上均为脱敏后的状态 (＾▽＾)/</p>
+    </footer>
+  </div>
+
+  <!-- 隐身态：整页只剩这一张卡（设计案 6.4 节） -->
+  <div id="page-hidden">
+    <article class="card solo">
+      <p class="solo-emoji" aria-hidden="true">🫥</p>
+      <h1 class="solo-title">隐身中！</h1>
+      <p class="card-body">现在是隐身时间，什么都看不到哦 (￣▽￣)~☆</p>
+      <p class="card-asof" id="hidden-until"></p>
+    </article>
+  </div>
+
+  <!-- 不可用态：请求失败或数据超过 2 分钟 -->
+  <div id="page-error">
+    <article class="card solo">
+      <p class="solo-emoji" aria-hidden="true">📡</p>
+      <h1 class="solo-title" id="error-title">灯塔信号丢失…</h1>
+      <p class="card-body" id="error-body">(╥﹏╥) 状态暂不可用，先去逛逛别的地方吧</p>
+      <p class="card-asof" id="error-meta"></p>
+    </article>
+  </div>
+
+  <noscript><p class="noscript">要看状态得先启用 JavaScript 哦 (・ω・)</p></noscript>
+</main>
+</body>
+</html>

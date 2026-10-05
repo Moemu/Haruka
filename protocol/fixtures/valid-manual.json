@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "device_id": "d_a1b2c3",
+  "device_kind": "android",
+  "sent_at": "2026-10-03T14:00:00Z",
+  "events": [
+    {
+      "id": "e_4f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "seq": 911,
+      "ts": "2026-10-03T13:59:44Z",
+      "type": "manual",
+      "data": { "mood": "focused", "text": "赶 deadline 中", "until": "2026-10-03T18:00:00Z" }
+    }
+  ]
+}

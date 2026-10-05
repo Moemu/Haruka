@@ -1,0 +1,29 @@
+# Haruka 服务端配置示例
+listen: 127.0.0.1:8080        # 前置 Caddy 反代 TLS 时监听回环
+db: haruka.db                 # 相对启动目录；生产部署请放在私有数据目录
+
+# 仅信任这些代理的 X-Forwarded-For；设备 IP 取 XFF 中从右向左第一个非受信跳。
+trusted_proxies: []           # 使用反向代理时，显式填写代理的 IP 或 CIDR
+
+# 公开快照的 CORS 白名单（博客域名）
+cors_origins: []              # 跨域读取公开 API 时填写博客域名
+
+# 超过新鲜度窗口的观测只入历史，不刷新公开状态
+freshness_lag: 10m            # 观测时间距接收时间的最大容差，超出只入库
+future_tolerance: 5m          # 允许的小幅时钟超前
+clock_skew_warn: 24h          # 偏差超过此值标记 clock_skew
+
+heartbeat_default_interval: 120s  # 设备未登记间隔时的兜底
+
+retention:
+  events: 168h                # 原始事件默认 7 天；长保留需显式调大
+
+on_hide: discard              # 隐身期间事件不入库（可选 keep）
+
+aggregation:
+  location_source_priority:   # Android 是预留来源，当前只有桌面采集端
+    - android
+    - desktop
+
+# 方案 A 的离线解析库（ip2region.xdb）路径；留空禁用派生。
+location_lookup_db: ""

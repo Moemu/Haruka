@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "device_id": "d_9f3ac2",
+  "device_kind": "desktop",
+  "sent_at": "2026-10-03T14:00:00Z",
+  "events": [
+    {
+      "id": "e_2f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "seq": 4823,
+      "ts": "2026-10-03T13:59:43Z",
+      "type": "location",
+      "data": { "source": "ip", "precision": "city", "country": "中国", "province": "上海", "city": "上海", "district": null, "zone": null }
+    }
+  ]
+}

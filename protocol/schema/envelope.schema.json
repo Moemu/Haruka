@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://haruka.example.com/schema/envelope.schema.json",
+  "title": "Haruka ingest envelope",
+  "description": "POST /v1/ingest 请求体。type 与 data 的对应关系由 allOf/if-then 约束；服务端以严格模式校验，未知字段一律拒绝。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "device_id", "device_kind", "sent_at", "events"],
+  "properties": {
+    "v": { "const": 1 },
+    "device_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+    "device_kind": { "enum": ["desktop", "android"] },
+    "sent_at": { "type": "string", "format": "date-time" },
+    "snapshot": { "type": "boolean" },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/event" }
+    }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "seq", "ts", "type", "data"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^e_[0-9a-f]{32}$" },
+        "seq": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
+        "ts": { "type": "string", "format": "date-time" },
+        "type": { "enum": ["heartbeat", "presence", "activity", "location", "manual"] },
+        "data": true
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "heartbeat" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/heartbeatData" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "presence" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/presenceData" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "activity" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/activityData" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "location" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/locationData" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "manual" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/manualData" } } }
+        }
+      ]
+    },
+    "heartbeatData": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "presenceData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "idle_minutes"],
+      "properties": {
+        "state": { "enum": ["active", "away"] },
+        "idle_minutes": { "type": "integer", "minimum": 0, "maximum": 10080 }
+      }
+    },
+    "activityData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["ide", "browser", "app", "private", "idle", "none"] },
+        "app": { "type": "string", "maxLength": 64 },
+        "category": { "enum": ["coding", "writing", "browsing", "design", "meeting", "private", "other", "", null] },
+        "project": { "type": ["string", "null"], "maxLength": 32, "pattern": "^[A-Za-z0-9_ -\\u4e00-\\u9fa5]*$" },
+        "file_type": { "type": "string", "pattern": "^\\.[a-z0-9]{1,8}$" }
+      }
+    },
+    "locationData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "precision"],
+      "properties": {
+        "source": { "enum": ["ip", "gps_coarse"] },
+        "precision": { "enum": ["country", "province", "city", "district"] },
+        "country": { "type": "string", "maxLength": 64 },
+        "province": { "type": ["string", "null"], "maxLength": 64 },
+        "city": { "type": ["string", "null"], "maxLength": 64 },
+        "district": { "type": ["string", "null"], "maxLength": 64 },
+        "zone": { "enum": ["home", null] }
+      }
+    },
+    "manualData": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mood": { "type": "string", "maxLength": 16 },
+        "text": { "type": "string", "maxLength": 240 },
+        "until": { "type": "string", "format": "date-time" },
+        "clear": { "type": "boolean" }
+      }
+    }
+  }
+}

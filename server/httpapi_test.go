@@ -246,6 +246,36 @@ func TestClientIPTrustedProxy(t *testing.T) {
 	}
 }
 
+func TestRootRedirectsToStatus(t *testing.T) {
+	f := newHTTPFixture(t)
+	// 不跟随重定向，才能断言 302 本身。
+	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}}
+
+	// 仅精确根路径跳转；未知路径仍应 404，不吞掉错误。
+	resp, err := client.Get(f.ts.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("/ 应 302，得到 %d", resp.StatusCode)
+	}
+	if loc := resp.Header.Get("Location"); loc != "/status" {
+		t.Fatalf("Location = %q，应为 /status", loc)
+	}
+
+	resp, err = client.Get(f.ts.URL + "/no-such-path")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("未知路径应 404，得到 %d", resp.StatusCode)
+	}
+}
+
 func TestStatusPageServed(t *testing.T) {
 	f := newHTTPFixture(t)
 

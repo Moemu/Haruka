@@ -47,6 +47,7 @@ func (e *Engine) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/device-capability", e.handleDeviceCapability)
 	mux.HandleFunc("GET /v1/public/status", e.handlePublicStatus)
 	mux.HandleFunc("GET /v1/whoami-ip", e.handleWhoamiIP)
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/status", http.StatusFound) })
 	mux.HandleFunc("GET /status", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "status.html") })
 	mux.HandleFunc("GET /status.css", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "status.css") })
 	mux.HandleFunc("GET /status.js", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "status.js") })

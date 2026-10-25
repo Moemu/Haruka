@@ -49,6 +49,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes || true
+          cp android/app/build/outputs/apk/release/app-release.apk "Haruka-$GITHUB_REF_NAME-android.apk"
           gh release upload "$GITHUB_REF_NAME" \
-            "android/app/build/outputs/apk/release/app-release.apk#Haruka-$GITHUB_REF_NAME-android.apk" \
-            apk-sha256.txt cert-digest.txt --clobber
+            "Haruka-$GITHUB_REF_NAME-android.apk" apk-sha256.txt cert-digest.txt --clobber

@@ -13,9 +13,9 @@ go test -count=1 ./...
 go build ./...
 ```
 
-Linux 还需运行 `go test -race -count=1 ./agent ./server`。修改平台代码时，请同时检查 Windows amd64 和 Linux amd64 构建。Darwin 仅检查构建，尚未实现桌面采集器。
+在 Linux 上还需运行 `go test -race -count=1 ./agent ./server`。修改平台代码时检查 Windows amd64 构建；桌面采集器仅支持 Windows，服务端保持 Linux amd64 可构建。
 
-`cmd/mockserver` 和 `cmd/x11-fakewin` 是联调工具。前者不能代替生产服务端；后者只能模拟 X11 窗口，不证明真实 IDE 或原生 Wayland 支持。测试使用生成的临时令牌和合成状态。
+`cmd/mockserver` 是联调工具，不能代替生产服务端。测试使用生成的临时令牌和合成状态。
 
 ## 提交要求
 

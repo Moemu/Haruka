@@ -17,7 +17,7 @@ Haruka 是一个自托管的个人状态同步服务。她从你的常用设备�
 
 你可以用她给博客报个平安，也可以通过公开 API 为自己的站点制作组件。状态页内置灯塔插画、亮暗主题和移动端布局，每 30 秒自动更新。
 
-**当前为开发预览版：Windows 和 Linux 桌面端已实现，Android 尚未实现。** 功能与验证范围见下表；请先在本机试用，再配置公网部署。
+**当前为开发预览版：Windows 桌面端已实现，Android 尚未实现。** Linux 桌面端适配已取消，采集端在该平台只上报心跳在线。功能与验证范围见下表；请先在本机试用，再配置公网部署。
 
 ## 特性🪄
 
@@ -34,9 +34,7 @@ Haruka 是一个自托管的个人状态同步服务。她从你的常用设备�
 | 平台 | 已实现 | 目前的边界 |
 | --- | --- | --- |
 | Windows amd64 | 用户会话空闲检测、前台应用、IDE 别名；SCM 监督服务 | 默认活动控制台会话；服务绑定安装用户。安装加固、升级和切换用户流程需进一步真机复验；RDP 未验证 |
-| Linux X11 | XScreenSaver 空闲检测、EWMH 前台窗口、IDE 别名；systemd user 服务 | WSLg 采集已验证；真实桌面登录、注销和 Xauthority 环境仍需验证 |
-| Linux Wayland | `ext-idle-notify-v1` 空闲通知 | 需要合成器支持；mock 验证通过，KDE/sway 真机待验证。活动采集仍依赖 X11/XWayland，不覆盖原生 Wayland 窗口 |
-| GNOME / Weston 等缺少空闲协议的环境 | 可报告在线，presence 为 unknown | 明确 unsupported 且能力记录有效时，只中性展示可采集的前台应用；故障、过期和 away 不放行 |
+| Linux 桌面 | 已取消适配：采集端可构建运行，仅上报心跳在线 | 空闲检测、前台应用采集和服务安装不再实现。Linux 仍是服务端的推荐部署平台 |
 | Android | 预留协议与设备类型 | 应用、控制页面、位置权限和后台服务均未实现 |
 | macOS / 手表 | 暂未支持 | macOS 仅检查构建；心率、步数和压力值暂未接入 |
 
@@ -48,7 +46,7 @@ Haruka 是一个自托管的个人状态同步服务。她从你的常用设备�
 
 获取项目源码后，在仓库目录运行：
 
-**Windows（PowerShell）：**
+**Windows（本机试用，PowerShell，构建服务端与采集端）：**
 
 ```powershell
 $env:GOARCH = "amd64"
@@ -59,15 +57,13 @@ Copy-Item examples/haruka-server.example.yml haruka-server.yml
 Copy-Item examples/haruka-agent.example.yml haruka-agent.yml
 ```
 
-**Linux：**
+**Linux（服务端部署）：**
 
 ```sh
 go mod download
 go build -trimpath -o bin/haruka-server ./cmd/haruka-server
-go build -trimpath -o bin/haruka-agent ./cmd/haruka-agent
 cp examples/haruka-server.example.yml haruka-server.yml
-cp examples/haruka-agent.example.yml haruka-agent.yml
-chmod 600 haruka-server.yml haruka-agent.yml
+chmod 600 haruka-server.yml
 ```
 
 下面使用 Linux 命令；Windows 将 `./bin/haruka-server`、`./bin/haruka-agent` 替换为对应的 `.exe`。
@@ -130,18 +126,6 @@ $agentConfig = (Resolve-Path ./haruka-agent.yml).Path
 ```
 
 安装会申请 UAC 提权，并复制二进制到受保护的 Program Files 目录。监督服务只在安装用户的活动控制台会话中启动采集器。监督日志位于 Windows 应用程序事件日志，采集日志位于用户状态目录。服务升级后请重新安装。
-
-**Linux（在图形会话中运行）：**
-
-```sh
-systemctl --user import-environment DISPLAY XAUTHORITY WAYLAND_DISPLAY XDG_RUNTIME_DIR
-./bin/haruka-agent install --config "$(pwd)/haruka-agent.yml"
-systemctl --user status haruka-agent.service
-# 卸载
-./bin/haruka-agent uninstall
-```
-
-需要 systemd user 和 `graphical-session.target`。环境变量不存在时，导入命令可能提示跳过对应变量。服务不会在仅有 SSH 会话时主动启动。不同桌面的登录环境仍需实测，不要用 linger 代替图形会话绑定。
 
 ## 隐私与控制🔒
 
@@ -212,12 +196,12 @@ systemctl --user status haruka-agent.service
 ## 后续计划🌱
 
 - [ ] Android 应用：服务状态、暂停控制、手动心情，以及权限与后台运行说明。
-- [ ] 完善 Wayland 的前台应用采集，并验证 KDE、sway 和 GNOME 的能力边界。
-- [ ] 扩大桌面安装、升级、登录、注销和多用户隔离验证。
+- [ ] 服务端公网部署落地：真实出口 IP 的定位验证、自动构建发布包与升级流程。
+- [ ] 运维小件：缓存空间回收、日志轮转、内置限流和备份恢复。
 - [ ] 区级位置与本机隐私降级；家庭位置保护和手动覆盖。
-- [ ] 缓存文件空间回收、日志轮转、内置限流和备份恢复工具。
-- [ ] 自动构建发布包，完善服务端部署与升级流程。
 - [ ] 根据实际需要接入手表的心率、步数等可选指标。
+
+Linux 桌面端适配已取消。Windows 的安装与升级流程随日常使用逐步完善，不再安排专项的桌面环境验证计划。
 
 ## 参与开发🤝
 

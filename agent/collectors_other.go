@@ -1,4 +1,7 @@
-//go:build !windows && !linux
+//go:build !windows
+
+// 非 Windows 桌面采集器：Linux 桌面适配已于 2026-10 取消，采集端在这些平台
+// 只上报心跳在线，空闲与活动采集如实降级为 unsupported。
 
 package agent
 

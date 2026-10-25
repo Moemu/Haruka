@@ -22,7 +22,9 @@ jobs:
           java-version: 17
       - name: ensure Android SDK packages
         run: |
-          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" >/dev/null
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKM" || { echo "sdkmanager not found at $SDKM"; ls -R "$ANDROID_HOME" | head; exit 1; }
+          "$SDKM" --install "platforms;android-35" "build-tools;35.0.0" >/dev/null
       - name: decode signing keystore
         run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/release.keystore
         env:

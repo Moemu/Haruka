@@ -160,6 +160,16 @@ $agentConfig = (Resolve-Path ./haruka-agent.yml).Path
 
 窗口标题原文不进入上报事件，浏览器页面使用 `textContent` 渲染。私密清单和字符串校验不能识别所有个人信息；请检查你配置的别名、应用映射和手动文字。更完整的边界见 [安全说明](SECURITY.md)。
 
+## 安装 Android 客户端📦
+
+从 [GitHub Releases](https://github.com/Moemu/Haruka/releases) 下载 `Haruka-<版本>-android.apk` 安装。自签 APK 不经应用商店，安装时按 ROM 提示放行三层：
+
+1. **未知来源**：给浏览器/文件管理器授「安装未知应用」权限（一次性）；
+2. **Play Protect**：提示「未经过 Play 保护机制检查」时选择继续安装；
+3. **澎湃 OS 纯净模式**：若被系统拦截，在 设置 → 更多安全设置 → 纯净模式 中关闭或允许本次安装。
+
+签名证书 SHA-256 为 `daf61f2774b8a881331e47d298cf7f340f6f05d0b4c19e4d6cac96de2088c38b`，与 Release 附件 `cert-digest.txt` 核对一致即为官方包。注意：开发用 debug 签名与 release 签名互不兼容，不能互相覆盖升级；更换签名密钥意味着卸载重装。
+
 ## Android 后台运行（澎湃 OS）📢
 
 Haruka 的 Android 端按「不触发系统管控」设计：不持唤醒锁、不做后台高耗电，单次心跳秒级完成，被误伤概率低。但澎湃 OS（以及其它国产 ROM）的省电策略仍可能限制它，表现为状态页长时间不更新。应用仪表盘会在明显超期未同步时提示；如果遇到，按下面三步检查（应用内「保活引导」页有同样内容）：

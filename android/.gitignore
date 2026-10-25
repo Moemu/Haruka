@@ -9,3 +9,9 @@ local.properties
 
 # Kotlin/Native 与构建缓存
 .kotlin/
+
+# 签名密钥与本地凭据（spec §7：不入库）
+keystore.properties
+release.keystore
+*.jks
+*.keystore

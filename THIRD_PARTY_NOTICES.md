@@ -37,4 +37,10 @@ ip2region 绑定采用 Apache-2.0；Go 系统库采用 BSD 许可；yaml.v3 同�
 
 离线 `.xdb` 数据库不随仓库提供，使用者须自行取得并遵守数据源许可。状态页默认从 jsDelivr 加载 `lxgw-wenkai-screen-webfont@1.7.0`。字体也不随仓库提供，许可及来源见 [LXGW WenKai Screen](https://github.com/lxgw/LxgwWenKai-Screen)；字体包加载会向 CDN 发送访客网络请求。需要完全本地部署时，可自行托管字体并修改页面链接及 CSP。
 
+Android 端离线反解边界包（`android/app/src/main/assets/haruka-boundaries.json.gz`）随应用分发，由 `cmd/boundaries` 构建产生：
+
+- 几何数据来自 [geoBoundaries](https://www.geoboundaries.org/) gbOpen CHN ADM1/ADM3，许可为 ODbL 1.0（ADM3 来源 © OpenStreetMap contributors，经 wambachers-osm.website 加工转载；ADM2 为国家基础地理信息中心数据，PDDL）。按 ODbL 要求，该派生边界数据同样以 ODbL 1.0 提供。
+- 行政区划中文名与层级（省/市/县代码、名称、驻地坐标）为公开事实数据，加工自 [DataV.GeoAtlas](https://datav.aliyun.com/portal/school/atlas/area_selector)（依据 GB/T 2260 行政区划代码），仅在构建期用于匹配，几何不采用其数据。
+- 更新边界包：按 `cmd/boundaries` 文件头注释重新执行下载与构建流程。
+
 发布二进制时，请一并提供本项目 `LICENSE`、`NOTICE`、本声明和 `licenses/`，并核对构建工具链和最终依赖的再分发要求。

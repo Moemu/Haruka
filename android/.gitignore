@@ -1,0 +1,11 @@
+# Gradle
+.gradle/
+build/
+local.properties
+
+# IDE
+.idea/
+*.iml
+
+# Kotlin/Native 与构建缓存
+.kotlin/

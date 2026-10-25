@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">遥</string>
+
+    <!-- 导航 -->
+    <string name="nav_dashboard">仪表盘</string>
+    <string name="nav_manual">手动状态</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- 首启向导 -->
+    <string name="onboarding_title">配置遥</string>
+    <string name="onboarding_step_server">服务器地址</string>
+    <string name="onboarding_step_server_hint">例如 https://haruka.example.com</string>
+    <string name="onboarding_step_credentials">设备登记信息</string>
+    <string name="onboarding_step_credentials_hint">在服务器上运行 haruka-server device add --kind android，把返回的 id 和 token 填到这里</string>
+    <string name="onboarding_step_owner">owner 令牌（可选）</string>
+    <string name="onboarding_step_owner_hint">用于在手机上发起全局隐身；跳过则不显示该按钮</string>
+    <string name="onboarding_step_notification">通知权限</string>
+    <string name="onboarding_step_notification_hint">拒绝后服务仍正常运行，仅状态栏通知不展示</string>
+    <string name="onboarding_step_battery">保活设置</string>
+    <string name="onboarding_step_battery_hint">申请忽略电池优化，可随时在设置中重新配置</string>
+    <string name="action_check">检查</string>
+    <string name="action_next">下一步</string>
+    <string name="action_skip">跳过</string>
+    <string name="action_done">完成</string>
+    <string name="action_back">上一步</string>
+    <string name="field_device_id">设备 ID</string>
+    <string name="field_device_token">设备令牌</string>
+    <string name="field_owner_token">owner 令牌</string>
+
+    <!-- 服务状态 -->
+    <string name="status_running">心跳运行中</string>
+    <string name="status_waiting">等待网络 · 队列 %1$d 条</string>
+    <string name="status_auth_error">令牌被拒绝，请检查设置</string>
+    <string name="status_paused">已暂停采集</string>
+    <string name="status_stopped">服务未运行</string>
+    <string name="status_doze">系统休眠中 · 最后同步 %1$s 前</string>
+    <string name="status_last_sync">上次同步 %1$s</string>
+    <string name="status_next_tick">下次心跳 %1$s</string>
+    <string name="action_start_service">启动服务</string>
+    <string name="action_stop_service">停止服务</string>
+
+    <!-- 快照预览 -->
+    <string name="snapshot_title">服务器眼中的我</string>
+    <string name="snapshot_hidden">现在是隐身时间，什么都看不到哦</string>
+    <string name="snapshot_active">正在大显身手 ✧</string>
+    <string name="snapshot_away">摸鱼去了 (´･ω･`)</string>
+    <string name="snapshot_offline">下线补番去了 zzZ</string>
+    <string name="snapshot_unknown">在线 · 状态未知</string>
+    <string name="snapshot_unavailable">灯塔信号丢失…</string>
+    <string name="snapshot_as_of">%1$s 前</string>
+
+    <!-- 采集开关 -->
+    <string name="collector_location">定位</string>
+    <string name="location_mode_server">服务端解析</string>
+    <string name="location_mode_local">设备反解</string>
+    <string name="location_mode_off">关闭</string>
+    <string name="location_syncing">定位策略同步中…</string>
+    <string name="location_hint">设备反解：坐标只在本机使用，仅上报省市区名；关闭定位由服务端强制执行。</string>
+    <string name="location_denied_title">定位权限被拒绝</string>
+    <string name="location_denied_text">没有定位权限就无法在设备上反解位置。改用服务端按 IP 解析（精度更粗），或关闭定位？</string>
+    <string name="location_denied_server">改用服务端解析</string>
+    <string name="location_denied_off">关闭定位</string>
+    <string name="location_restore_note">重启后需打开一次应用恢复定位采样</string>
+    <string name="settings_home_district">家所在区县</string>
+    <string name="settings_home_district_save">保存</string>
+    <string name="settings_home_district_hint">在家时状态页显示「在家」而不显示区名。填行政区全名（如：鹿寨县），留空关闭；判定粒度为区县，与家同区县的地点无法区分。</string>
+
+    <!-- 手动状态 -->
+    <string name="manual_title">现在的心情</string>
+    <string name="manual_note_hint">附言（可选，60 字以内）</string>
+    <string name="manual_expiry_1h">1 小时</string>
+    <string name="manual_expiry_4h">4 小时</string>
+    <string name="manual_expiry_today">今天</string>
+    <string name="manual_publish">发布</string>
+    <string name="manual_clear">清除</string>
+    <string name="manual_saved_offline">已保存待同步</string>
+    <string name="manual_published">已发布，等待下一轮同步</string>
+    <string name="manual_active_until">有效期至 %1$s</string>
+    <string name="manual_char_count">%1$d / 60</string>
+
+    <!-- 设置 -->
+    <string name="settings_section_server">服务器</string>
+    <string name="settings_section_collect">采集</string>
+    <string name="settings_section_control">控制</string>
+    <string name="settings_section_keepalive">系统与保活</string>
+    <string name="settings_heartbeat_interval">心跳间隔</string>
+    <string name="settings_heartbeat_hint">需与服务端登记值一致</string>
+    <string name="settings_pause_device">暂停本设备</string>
+    <string name="settings_pause_1h">1 小时</string>
+    <string name="settings_pause_2h">2 小时</string>
+    <string name="settings_pause_8h">8 小时</string>
+    <string name="settings_resume">恢复</string>
+    <string name="settings_hide">全局隐身</string>
+    <string name="settings_hide_1h">1 小时</string>
+    <string name="settings_hide_4h">4 小时</string>
+    <string name="settings_hide_forever">不限期</string>
+    <string name="settings_show">解除隐身</string>
+    <string name="settings_needs_owner">需要 owner 令牌</string>
+    <string name="settings_battery_whitelist">申请忽略电池优化</string>
+    <string name="settings_battery_ok">已豁免电池优化</string>
+    <string name="settings_battery_missing">未豁免电池优化，建议开启</string>
+    <string name="settings_open_keepalive">打开保活引导</string>
+    <string name="settings_tab_general">常规</string>
+    <string name="settings_tab_control">控制</string>
+    <string name="settings_tab_advanced">高级</string>
+    <string name="settings_tab_about">关于</string>
+    <string name="settings_diag">诊断</string>
+    <string name="settings_diag_hint">运行日志保存在应用私有目录，默认不展示；仅排障时查看，上报前请自行确认内容。</string>
+    <string name="settings_open_logs">查看运行日志</string>
+    <string name="logs_title">运行日志</string>
+    <string name="logs_copy">复制全部</string>
+    <string name="logs_clear">清除</string>
+    <string name="logs_empty">暂无日志</string>
+    <string name="about_app_line">遥 · Haruka</string>
+    <string name="about_version">版本 %1$s · Apache-2.0</string>
+    <string name="about_homepage">github.com/Moemu/Haruka</string>
+    <string name="about_privacy_title">隐私</string>
+    <string name="about_privacy_text">无统计、无广告、无 GMS 依赖。定位坐标不出本机内存，仅上报行政区名；令牌保存在应用私有沙盒。</string>
+    <string name="about_boundaries_title">定位边界数据</string>
+    <string name="about_boundaries_text">行政区划几何来自 GeoBoundaries（ODbL 1.0），区划中文名为公开事实数据（GB/T 2260），构建期嵌入应用。详见仓库 THIRD_PARTY_NOTICES.md。</string>
+    <string name="about_license_title">许可</string>
+    <string name="about_license_text">本项目以 Apache-2.0 发布。第三方组件与数据署名见仓库 THIRD_PARTY_NOTICES.md。</string>
+    <string name="about_docs_title">文档</string>
+    <string name="about_docs_text">设计总案见仓库 docs/design.md，Android 端规格见 docs/android-app.md。</string>
+
+    <!-- 保活引导（spec §4.4） -->
+    <string name="keepalive_title">保活引导</string>
+    <string name="keepalive_step_battery">忽略电池优化</string>
+    <string name="keepalive_step_battery_path">系统对话框（标准 Intent），点下方按钮发起</string>
+    <string name="keepalive_step_battery_apply">申请豁免</string>
+    <string name="keepalive_step_powersave">省电策略设为「无限制」</string>
+    <string name="keepalive_step_powersave_path">设置 → 应用 → 应用管理 → 遥 → 省电策略</string>
+    <string name="keepalive_step_autostart">允许自启动</string>
+    <string name="keepalive_step_autostart_path">手机管家 → 应用管理 → 权限 → 自启动</string>
+    <string name="keepalive_more_title">若仍被限制</string>
+    <string name="keepalive_more_body">两项非常规手段：最近任务卡片长按 → 锁定；设置 → 省电与电池 → 右上角 → 应用智能省电（Powerkeeper 管辖的核查入口）。</string>
+    <string name="keepalive_promise">Haruka 不持唤醒锁、不做后台高耗电，被误伤概率低；Haruka 不会自动修改任何系统设置。</string>
+
+    <!-- 观测提示卡（spec §5.4） -->
+    <string name="stale_sync_title">已 %1$d 分钟未同步</string>
+    <string name="stale_sync_text">可能被系统限制了后台。Doze 深度休眠期间变慢属正常；若亮屏使用时仍长时间不同步，按保活指引检查一遍。</string>
+    <string name="stale_sync_action">打开保活引导</string>
+
+    <!-- 通知 -->
+    <string name="notif_channel_name">同步状态</string>
+    <string name="notif_title_running">遥 · 同步中</string>
+    <string name="notif_title_waiting">遥 · 等待网络</string>
+    <string name="notif_title_paused">遥 · 已暂停</string>
+    <string name="notif_title_auth">遥 · 令牌被拒绝</string>
+    <string name="location_channel_name">定位采样</string>
+    <string name="notif_title_location">遥 · 定位采样中</string>
+
+    <!-- 日志 -->
+    <string name="time_minutes_ago">%1$d 分钟前</string>
+    <string name="time_hours_ago">%1$d 小时前</string>
+    <string name="time_just_now">刚刚</string>
+</resources>

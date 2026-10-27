@@ -39,6 +39,8 @@
     <string name="status_next_tick">下次心跳 %1$s</string>
     <string name="action_start_service">启动服务</string>
     <string name="action_stop_service">停止服务</string>
+    <string name="fab_start">启动</string>
+    <string name="fab_running">已运行 %1$s</string>
 
     <!-- 快照预览 -->
     <string name="snapshot_title">服务器眼中的我</string>
@@ -64,6 +66,8 @@
     <string name="location_restore_note">重启后需打开一次应用恢复定位采样</string>
     <string name="settings_home_district">家所在区县</string>
     <string name="settings_home_district_save">保存</string>
+    <string name="settings_home_district_current">已保存：%1$s</string>
+    <string name="settings_home_district_not_set">未设置</string>
     <string name="settings_home_district_hint">在家时状态页显示「在家」而不显示区名。填行政区全名（如：鹿寨县），留空关闭；判定粒度为区县，与家同区县的地点无法区分。</string>
 
     <!-- 手动状态 -->

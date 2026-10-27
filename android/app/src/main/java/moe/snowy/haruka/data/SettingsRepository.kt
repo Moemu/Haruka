@@ -35,6 +35,11 @@ data class Settings(
     val manualCleared: Boolean = true,
     /** 待确认的控制操作：格式 "hide|<untilRfc3339>" 或 "show|"，上线后由服务节拍补发。 */
     val pendingControl: String = "",
+    /**
+     * 用户主动停止后为 false：所有自动拉起路径（SyncWorker 兜底、开机自启、
+     * 打开应用恢复定位采样）都必须尊重，与「被系统回收」区分。默认 true 兼容存量安装。
+     */
+    val serviceEnabled: Boolean = true,
 ) {
     val configured: Boolean
         get() = serverUrl.isNotBlank() && deviceId.isNotBlank() && deviceToken.isNotBlank()
@@ -60,6 +65,7 @@ class SettingsRepository(private val context: Context) {
         val manualUntil = longPreferencesKey("manual_until_ms")
         val manualCleared = androidx.datastore.preferences.core.booleanPreferencesKey("manual_cleared")
         val pendingControl = stringPreferencesKey("pending_control")
+        val serviceEnabled = androidx.datastore.preferences.core.booleanPreferencesKey("service_enabled")
     }
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
@@ -79,6 +85,7 @@ class SettingsRepository(private val context: Context) {
             manualUntilMs = p[K.manualUntil] ?: 0,
             manualCleared = p[K.manualCleared] ?: true,
             pendingControl = p[K.pendingControl] ?: "",
+            serviceEnabled = p[K.serviceEnabled] ?: true,
         )
     }
 
@@ -123,5 +130,9 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setPendingControl(v: String?) = context.dataStore.edit {
         if (v == null) it.remove(K.pendingControl) else it[K.pendingControl] = v
+    }
+
+    suspend fun setServiceEnabled(enabled: Boolean) = context.dataStore.edit {
+        it[K.serviceEnabled] = enabled
     }
 }

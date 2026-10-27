@@ -16,8 +16,9 @@ class BootReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // 未完成配置时不启动服务（否则未配置打拍即崩）。
-                if (!c.settings.current().configured) return@launch
+                // 未配置不启动（否则未配置打拍即崩）；用户主动停止的不自启（serviceEnabled）。
+                val s = c.settings.current()
+                if (!s.configured || !s.serviceEnabled) return@launch
                 HeartbeatService.start(context)
                 c.logs.log("boot", "重启后已自启心跳服务")
             } catch (t: Throwable) {

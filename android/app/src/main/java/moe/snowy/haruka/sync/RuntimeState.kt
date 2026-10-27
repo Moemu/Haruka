@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 data class RuntimeState(
     val running: Boolean = false,
     val phase: String = PHASE_STOPPED, // stopped | starting | ok | waiting | auth | paused
+    /** 服务本次运行的起点（心跳循环启动时刻），供仪表盘 FAB 显示运行时长；停止后归零。 */
+    val startedAtMs: Long = 0,
     val lastSyncMs: Long = 0,
     val nextTickMs: Long = 0,
     val queue: Int = 0,

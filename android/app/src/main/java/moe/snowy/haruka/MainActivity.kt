@@ -14,17 +14,25 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -33,13 +41,19 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.delay
 import moe.snowy.haruka.ui.AppViewModel
 import moe.snowy.haruka.ui.DashboardScreen
 import moe.snowy.haruka.ui.KeepAliveScreen
 import moe.snowy.haruka.ui.LogScreen
 import moe.snowy.haruka.ui.ManualStatusScreen
 import moe.snowy.haruka.ui.OnboardingScreen
+import moe.snowy.haruka.ui.SettingsAboutPage
+import moe.snowy.haruka.ui.SettingsCollectPage
+import moe.snowy.haruka.ui.SettingsControlPage
 import moe.snowy.haruka.ui.SettingsScreen
+import moe.snowy.haruka.ui.SettingsServerPage
+import moe.snowy.haruka.ui.durationText
 import moe.snowy.haruka.ui.theme.HarukaTheme
 
 class MainActivity : ComponentActivity() {
@@ -78,24 +92,52 @@ fun MainScreen(vm: AppViewModel) {
     val current = backStack?.destination?.route ?: "dashboard"
     val runtime by vm.runtime.collectAsStateWithLifecycle()
 
+    // 操作反馈统一走 Snackbar：家区县保存、定位策略确认、暂停/隐身、手动状态发布等
+    val snackbarHostState = remember { SnackbarHostState() }
+    val message by vm.message.collectAsStateWithLifecycle()
+    LaunchedEffect(message) {
+        message?.let {
+            snackbarHostState.showSnackbar(it)
+            vm.consumeMessage()
+        }
+    }
+
     Scaffold(
-        // 服务总开关固定在右下角（FlClash 式安排）：仪表盘页显示，运行/停止一键切换
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        // 服务总开关固定在右下角（FlClash 式 Extended FAB）：图标旁带文本——
+        // 停止时「启动」，运行时「已运行 x」，操作意图与状态一眼可见
         floatingActionButton = {
             if (current == "dashboard") {
                 val running = runtime.running
-                FloatingActionButton(
-                    onClick = { if (running) vm.stopService() else vm.startService() },
-                ) {
-                    if (running) {
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .background(MaterialTheme.colorScheme.onPrimaryContainer, RoundedCornerShape(3.dp)),
-                        )
-                    } else {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.action_start_service))
+                var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+                LaunchedEffect(running) {
+                    while (running) {
+                        delay(30_000)
+                        nowMs = System.currentTimeMillis()
                     }
                 }
+                ExtendedFloatingActionButton(
+                    text = {
+                        Text(
+                            if (running) stringResource(R.string.fab_running, durationText(runtime.startedAtMs, nowMs))
+                            else stringResource(R.string.fab_start),
+                        )
+                    },
+                    icon = {
+                        if (running) {
+                            val stopLabel = stringResource(R.string.action_stop_service)
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .background(MaterialTheme.colorScheme.onPrimaryContainer, RoundedCornerShape(3.dp))
+                                    .semantics { contentDescription = stopLabel },
+                            )
+                        } else {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                        }
+                    },
+                    onClick = { if (running) vm.stopService() else vm.startService() },
+                )
             }
         },
         bottomBar = {
@@ -124,7 +166,21 @@ fun MainScreen(vm: AppViewModel) {
         ) {
             composable("dashboard") { DashboardScreen(vm, onOpenKeepAlive = { navController.navigate("keepalive") }) }
             composable("manual") { ManualStatusScreen(vm) }
-            composable("settings") { SettingsScreen(vm, onOpenKeepAlive = { navController.navigate("keepalive") }, onOpenLogs = { navController.navigate("logs") }) }
+            composable("settings") {
+                SettingsScreen(
+                    vm,
+                    onOpenServer = { navController.navigate("settings/server") },
+                    onOpenCollect = { navController.navigate("settings/collect") },
+                    onOpenControl = { navController.navigate("settings/control") },
+                    onOpenAbout = { navController.navigate("settings/about") },
+                    onOpenKeepAlive = { navController.navigate("keepalive") },
+                    onOpenLogs = { navController.navigate("logs") },
+                )
+            }
+            composable("settings/server") { SettingsServerPage(vm, onBack = { navController.popBackStack() }) }
+            composable("settings/collect") { SettingsCollectPage(vm, onBack = { navController.popBackStack() }) }
+            composable("settings/control") { SettingsControlPage(vm, onBack = { navController.popBackStack() }) }
+            composable("settings/about") { SettingsAboutPage(onBack = { navController.popBackStack() }) }
             composable("keepalive") { KeepAliveScreen(vm, onBack = { navController.popBackStack() }) }
             composable("logs") { LogScreen(vm, onBack = { navController.popBackStack() }) }
         }

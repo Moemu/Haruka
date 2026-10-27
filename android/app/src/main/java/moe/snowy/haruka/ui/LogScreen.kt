@@ -58,6 +58,12 @@ fun LogScreen(vm: AppViewModel, onBack: () -> Unit) {
             }) { Text(stringResource(R.string.logs_copy)) }
             OutlinedButton(onClick = { vm.clearLogs() }) { Text(stringResource(R.string.logs_clear)) }
         }
+        Text(
+            stringResource(R.string.settings_diag_hint),
+            modifier = Modifier.padding(horizontal = 16.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         if (logs.isEmpty()) {
             Text(
                 stringResource(R.string.logs_empty),

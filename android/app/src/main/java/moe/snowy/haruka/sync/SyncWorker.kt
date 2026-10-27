@@ -22,7 +22,8 @@ class SyncWorker(
     override suspend fun doWork(): Result {
         val c = (applicationContext as HarukaApp).container
         val settings = c.settings.current()
-        if (!settings.configured) return Result.success()
+        // 用户主动停止（serviceEnabled=false）与被系统回收不同：兜底不做任何拉起或同步
+        if (!settings.configured || !settings.serviceEnabled) return Result.success()
 
         // 观测回路（spec §5.4）：上次执行被系统停掉的原因入日志，与 doctor 同源排障。
         try {
@@ -80,6 +81,11 @@ class SyncWorker(
                 ExistingPeriodicWorkPolicy.KEEP,
                 request,
             )
+        }
+
+        /** 用户主动停止时随服务一起取消，不再每 15 分钟唤醒进程。 */
+        fun cancelScheduled(context: Context) {
+            WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_NAME)
         }
     }
 }

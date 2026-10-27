@@ -19,3 +19,11 @@ fun shortTime(epochMs: Long): String =
 fun shortDateTime(epochMs: Long): String =
     DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(ZoneId.systemDefault())
         .format(Instant.ofEpochMilli(epochMs))
+
+/** 运行时长粗粒度展示（FAB 用）：与相对时间同一口径，分钟内不细分。 */
+fun durationText(fromMs: Long, nowMs: Long = System.currentTimeMillis()): String = when {
+    fromMs <= 0 -> "—"
+    nowMs - fromMs < 60_000 -> "1 分钟内"
+    nowMs - fromMs < 3_600_000 -> "${(nowMs - fromMs) / 60_000} 分钟"
+    else -> "${(nowMs - fromMs) / 3_600_000} 小时"
+}

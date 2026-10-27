@@ -67,14 +67,22 @@ class HeartbeatService : Service() {
     override fun onDestroy() {
         loopStarted = false
         tracker.stop()
-        ServiceRuntime.state.value = ServiceRuntime.state.value.copy(running = false, phase = RuntimeState.PHASE_STOPPED)
+        ServiceRuntime.state.value = ServiceRuntime.state.value.copy(
+            running = false,
+            phase = RuntimeState.PHASE_STOPPED,
+            startedAtMs = 0,
+        )
         scope.cancel()
         super.onDestroy()
     }
 
     /** 先立即打一拍（服务启动即心跳），然后按间隔/退避/手动唤醒等待。 */
     private suspend fun runLoop() {
-        ServiceRuntime.state.value = ServiceRuntime.state.value.copy(running = true, phase = RuntimeState.PHASE_STARTING)
+        ServiceRuntime.state.value = ServiceRuntime.state.value.copy(
+            running = true,
+            phase = RuntimeState.PHASE_STARTING,
+            startedAtMs = System.currentTimeMillis(),
+        )
         syncLocationPolicy()
         while (true) {
             // 任何节拍异常都不允许带崩前台服务进程：记日志、按常规间隔重试。

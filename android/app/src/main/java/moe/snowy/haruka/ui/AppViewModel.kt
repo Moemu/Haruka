@@ -43,10 +43,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val runtime = ServiceRuntime.state
 
     init {
-        // location 型 FGS 不能后台自启：打开应用时恢复定位采样（spec §2.2 已知限制）。
+        // location 型 FGS 不能后台自启：打开应用时恢复定位采样（spec §2.2 已知限制）；
+        // 用户主动停止过服务的不恢复（serviceEnabled=false）。
         viewModelScope.launch(Dispatchers.IO) {
             val s = c.settings.current()
-            if (s.configured && s.locationMode == LOCATION_LOCAL && hasLocationPermission()) {
+            if (s.configured && s.serviceEnabled && s.locationMode == LOCATION_LOCAL && hasLocationPermission()) {
                 LocationService.start(appContext)
             }
         }
@@ -94,13 +95,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
 
+    /** 启动：解除主动停止标记，心跳 + 兜底 + 按当前策略恢复定位采样，一步到位。 */
     fun startService() {
-        HeartbeatService.start(appContext)
-        SyncWorker.ensureScheduled(appContext)
+        viewModelScope.launch {
+            c.settings.setServiceEnabled(true)
+            HeartbeatService.start(appContext)
+            SyncWorker.ensureScheduled(appContext)
+            val s = c.settings.current()
+            if (s.locationMode == LOCATION_LOCAL && hasLocationPermission()) {
+                LocationService.start(appContext)
+            }
+        }
     }
 
+    /**
+     * 完全停止：持久化停止标记（SyncWorker 兜底与开机自启据此不再拉起），
+     * 取消兜底任务，并连同定位采样一起停——「停止」意味着全部采集停下。
+     */
     fun stopService() {
-        HeartbeatService.stop(appContext)
+        viewModelScope.launch {
+            c.settings.setServiceEnabled(false)
+            SyncWorker.cancelScheduled(appContext)
+            LocationService.stop(appContext)
+            HeartbeatService.stop(appContext)
+        }
     }
 
     /**
@@ -117,10 +135,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 is HttpResult.Ok -> {
                     c.settings.setLocationMode(mode)
                     when (mode) {
-                        LOCATION_LOCAL -> LocationService.start(appContext)
+                        // 服务处于主动停止状态时不拉起定位采样；启动服务时按策略统一恢复
+                        LOCATION_LOCAL ->
+                            if (c.settings.current().serviceEnabled) LocationService.start(appContext)
+                            else LocationService.stop(appContext)
                         else -> LocationService.stop(appContext)
                     }
-                    _message.value = "定位策略已由服务端确认：$mode"
+                    _message.value = "定位策略已由服务端确认：" + modeLabel(mode)
                 }
                 is HttpResult.Http -> _message.value = "服务端拒绝（HTTP ${r.code}），保持原设置"
                 is HttpResult.Network -> _message.value = "网络不可达，保持原设置"
@@ -133,6 +154,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun hasLocationPermission(): Boolean =
         ContextCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_COARSE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
+
+    private fun modeLabel(mode: String): String = when (mode) {
+        moe.snowy.haruka.data.LOCATION_SERVER -> appContext.getString(R.string.location_mode_server)
+        moe.snowy.haruka.data.LOCATION_LOCAL -> appContext.getString(R.string.location_mode_local)
+        else -> appContext.getString(R.string.location_mode_off)
+    }
 
     /**
      * 家区名保存（c-3）：先在边界包中校验区名存在，防止拼错导致「在家」永不命中；
@@ -279,6 +306,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun completeOnboarding(serverUrl: String, deviceId: String, token: String, ownerToken: String) {
         viewModelScope.launch {
             c.settings.saveCredentials(serverUrl, deviceId, token, ownerToken)
+            c.settings.setServiceEnabled(true)
             if (ServiceRuntime.state.value.running) {
                 // 服务已随开机/兜底路径启动过：唤醒立即打第一拍。
                 HeartbeatService.requestFlush()

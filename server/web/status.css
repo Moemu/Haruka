@@ -78,14 +78,10 @@ body {
   gap: 10px;
 }
 .logo-mark {
-  display: inline-grid;
-  place-items: center;
   width: 40px;
   height: 40px;
   border-radius: 14px;
-  background: linear-gradient(135deg, var(--pink), var(--lavender));
-  color: #fff;
-  font-size: 1.2rem;
+  object-fit: cover;
   box-shadow: var(--shadow);
 }
 .tagline { margin: 0; color: var(--muted); font-size: 0.95rem; }

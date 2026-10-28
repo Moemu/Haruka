@@ -297,7 +297,7 @@ func TestStatusPageServed(t *testing.T) {
 	if resp.Header.Get("Cache-Control") != "no-cache" || resp.Header.Get("ETag") == "" {
 		t.Fatal("静态页也应 no-cache + ETag，保证升级后立即生效")
 	}
-	for _, marker := range []string{"遥遥在望", `id="banner"`, "status.js"} {
+	for _, marker := range []string{"遥遥在望", `id="banner"`, "status.js", "/icon.png"} {
 		if !bytes.Contains(body, []byte(marker)) {
 			t.Fatalf("页面缺少标记 %q", marker)
 		}
@@ -318,6 +318,7 @@ func TestStatusPageServed(t *testing.T) {
 	for _, tc := range []struct{ path, ctype string }{
 		{"/status.css", "text/css"},
 		{"/status.js", "text/javascript"},
+		{"/icon.png", "image/png"},
 	} {
 		r, err := http.Get(f.ts.URL + tc.path)
 		if err != nil {

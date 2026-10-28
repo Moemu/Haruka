@@ -16,7 +16,7 @@ import (
 
 // 状态页静态资源随二进制分发（设计案 §10：独立页由 GET /status 提供）。
 //
-//go:embed web/status.html web/status.css web/status.js
+//go:embed web/status.html web/status.css web/status.js web/icon.png
 var webFiles embed.FS
 
 type webAsset struct {
@@ -27,7 +27,7 @@ type webAsset struct {
 var webAssets = map[string]webAsset{}
 
 func init() {
-	for _, name := range []string{"status.html", "status.css", "status.js"} {
+	for _, name := range []string{"status.html", "status.css", "status.js", "icon.png"} {
 		body, err := webFiles.ReadFile("web/" + name)
 		if err != nil {
 			panic(err) // go:embed 在编译期保证文件存在
@@ -51,6 +51,8 @@ func (e *Engine) Handler() http.Handler {
 	mux.HandleFunc("GET /status", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "status.html") })
 	mux.HandleFunc("GET /status.css", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "status.css") })
 	mux.HandleFunc("GET /status.js", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "status.js") })
+	mux.HandleFunc("GET /icon.png", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "icon.png") })
+	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "icon.png") })
 	return mux
 }
 
@@ -69,6 +71,8 @@ func (e *Engine) serveWeb(w http.ResponseWriter, r *http.Request, name string) {
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	case "status.js":
 		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	case "icon.png":
+		w.Header().Set("Content-Type", "image/png")
 	}
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("ETag", a.etag)

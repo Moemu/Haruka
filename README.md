@@ -1,4 +1,5 @@
 <div align="center">
+  <img width="100%" src="https://erika.snowy.moe/v1/banner/Moemu/Haruka.webp?title=Haruka%EF%BC%88%E9%81%A5%EF%BC%89&amp;description=%E8%AE%BE%E5%A4%87%E5%90%84%E5%9C%A8%E4%B8%80%E6%96%B9%EF%BC%8C%E8%AE%A9%E9%81%A5%E6%9B%BF%E4%BD%A0%E6%8A%A5%E4%B8%AA%E5%B9%B3%E5%AE%89%E3%80%82&amp;accent=%23E58CAD" alt="Haruka Banner" />
   <h1>Haruka（遥）</h1>
   <i>A little lighthouse for your everyday presence.</i>
   <p>设备各在一方，让遥替你报个平安。</p>

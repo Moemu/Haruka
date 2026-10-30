@@ -100,7 +100,7 @@ func TestAssertion1ExpiryWithoutEvents(t *testing.T) {
 	te.heartbeat(t, dev)
 	originalTS := te.now
 	te.emit(t, dev, protocol.TypePresence, te.now, protocol.PresenceData{State: protocol.StateActive, IdleMinutes: 0})
-	te.emit(t, dev, protocol.TypeActivity, te.now, protocol.ActivityData{Kind: "ide", App: "IntelliJ IDEA", Category: "coding", Project: "aurora"})
+	te.emit(t, dev, protocol.TypeActivity, te.now, protocol.ActivityData{Kind: "ide", App: "IntelliJ IDEA", Category: "coding"})
 	te.emit(t, dev, protocol.TypeLocation, te.now, protocol.LocationData{Source: "ip", Precision: "city", City: "上海", Province: "上海", Country: "中国"})
 
 	snap := te.snapshot(t)
@@ -109,8 +109,12 @@ func TestAssertion1ExpiryWithoutEvents(t *testing.T) {
 			snap.Activity, snap.Location, *snap.Presence)
 	}
 
-	// activity TTL 10 分钟：+10m01s 消失，但设备仍在线（心跳窗口 30 分钟）。
-	te.now = te.now.Add(10*time.Minute + time.Second)
+	// activity TTL = max(2×间隔, 10 分钟) = 20 分钟：无新 activity 事件即过期消失。
+	// presence 与 activity 的 TTL 公式相同，这里补一拍 presence 让两者错开，
+	// 单独观察 activity 的过期（设备仍在线且 active）。
+	te.now = te.now.Add(20*time.Minute + time.Second)
+	secondActiveTS := te.now
+	te.emit(t, dev, protocol.TypePresence, te.now, protocol.PresenceData{State: protocol.StateActive, IdleMinutes: 0})
 	snap = te.snapshot(t)
 	if snap.Activity != nil {
 		t.Fatalf("activity 应已过期: %+v", snap.Activity)
@@ -134,7 +138,7 @@ func TestAssertion1ExpiryWithoutEvents(t *testing.T) {
 	if snap.Online || snap.Presence.State != "offline" {
 		t.Fatalf("设备应已离线: %+v", snap.Presence)
 	}
-	if snap.Presence.LastActiveAt != formatTime(originalTS) || snap.Presence.AsOf != formatTime(originalTS) {
+	if snap.Presence.LastActiveAt != formatTime(secondActiveTS) || snap.Presence.AsOf != formatTime(secondActiveTS) {
 		t.Fatalf("离线后 as_of 应为 last_active_at 且不随轮询推进: %+v", *snap.Presence)
 	}
 }
@@ -147,15 +151,15 @@ func TestAssertion2BackfillDoesNotOverride(t *testing.T) {
 	te.emit(t, dev, protocol.TypePresence, te.now, protocol.PresenceData{State: protocol.StateActive, IdleMinutes: 0})
 
 	newTS := te.now
-	te.emit(t, dev, protocol.TypeActivity, newTS, protocol.ActivityData{Kind: "ide", App: "GoLand", Category: "coding", Project: "new"})
+	te.emit(t, dev, protocol.TypeActivity, newTS, protocol.ActivityData{Kind: "ide", App: "GoLand", Category: "coding"})
 
 	// 30 分钟前的积压事件现在到达：只入库，不刷新实时态。
 	te.now = te.now.Add(time.Minute)
 	te.emit(t, dev, protocol.TypeActivity, newTS.Add(-30*time.Minute),
-		protocol.ActivityData{Kind: "ide", App: "GoLand", Category: "coding", Project: "old"})
+		protocol.ActivityData{Kind: "ide", App: "GoLand", Category: "coding"})
 
 	snap := te.snapshot(t)
-	if snap.Activity == nil || snap.Activity.Display != "在 GoLand 里写 new" {
+	if snap.Activity == nil || snap.Activity.Display != "正在用 GoLand 写代码" {
 		t.Fatalf("实时态应保持为较新事件: %+v", snap.Activity)
 	}
 	if !snap.Activity.AsOfEqual(formatTime(newTS)) {
@@ -165,9 +169,9 @@ func TestAssertion2BackfillDoesNotOverride(t *testing.T) {
 	// 同秒乱序：seq 更小的事件不得覆盖。
 	te.seqs[dev.ID] = 100
 	oldSeqEv, _ := protocol.NewEvent(protocol.TypeActivity, 1, newTS,
-		protocol.ActivityData{Kind: "ide", App: "GoLand", Category: "coding", Project: "stale"})
+		protocol.ActivityData{Kind: "ide", App: "GoLand", Category: "coding"})
 	te.emitRaw(t, dev, oldSeqEv)
-	if snap = te.snapshot(t); snap.Activity.Display != "在 GoLand 里写 new" {
+	if snap = te.snapshot(t); snap.Activity.Display != "正在用 GoLand 写代码" {
 		t.Fatalf("同秒低序号不得覆盖: %+v", snap.Activity)
 	}
 }
@@ -421,7 +425,7 @@ func TestAssertion8HideExpirySelfHealAndKeepMode(t *testing.T) {
 	}
 	te2.now = te2.now.Add(30 * time.Second)
 	te2.emit(t, dev2, protocol.TypeActivity, te2.now,
-		protocol.ActivityData{Kind: "ide", App: "GoLand", Category: "coding", Project: "secret"})
+		protocol.ActivityData{Kind: "ide", App: "GoLand", Category: "coding"})
 	if err := te2.e.Show(); err != nil {
 		t.Fatal(err)
 	}
@@ -438,8 +442,34 @@ func TestAssertion8HideExpirySelfHealAndKeepMode(t *testing.T) {
 		t.Fatalf("隐身期间的观测不得在 Show 后公开: %+v", snap.Activity)
 	}
 	te2.emit(t, dev2, protocol.TypeActivity, te2.now,
-		protocol.ActivityData{Kind: "ide", App: "GoLand", Category: "coding", Project: "fresh"})
-	if snap = te2.snapshot(t); snap.Activity == nil || snap.Activity.Display != "在 GoLand 里写 fresh" {
+		protocol.ActivityData{Kind: "ide", App: "GoLand", Category: "coding"})
+	if snap = te2.snapshot(t); snap.Activity == nil || snap.Activity.Display != "正在用 GoLand 写代码" {
 		t.Fatalf("Show 后的新观测应正常展示: %+v", snap.Activity)
+	}
+}
+
+// 设备电量聚合与分类动词：device 事件只在设备在线且未过期时出现在公开快照。
+func TestDeviceStatusAndCategoryVerbs(t *testing.T) {
+	te := newTestEnv(t, nil)
+	phone := te.addDevice(t, protocol.KindAndroid, 10*time.Minute)
+	te.heartbeat(t, phone)
+	te.emit(t, phone, protocol.TypePresence, te.now, protocol.PresenceData{State: protocol.StateActive, IdleMinutes: 0})
+	te.emit(t, phone, protocol.TypeActivity, te.now, protocol.ActivityData{Kind: "app", App: "B 站", Category: "media"})
+	te.emit(t, phone, protocol.TypeDevice, te.now, protocol.DeviceData{BatteryLevel: 85, Charging: true})
+	pc := te.addDevice(t, protocol.KindDesktop, 10*time.Minute)
+	te.heartbeat(t, pc) // 台式机不发 device 事件
+
+	snap := te.snapshot(t)
+	if snap.Activity == nil || snap.Activity.Display != "正在刷 B 站" {
+		t.Fatalf("media 分类动词: %+v", snap.Activity)
+	}
+	if len(snap.Devices) != 1 || snap.Devices[0].Kind != "android" || snap.Devices[0].Battery == nil ||
+		snap.Devices[0].Battery.Level != 85 || !snap.Devices[0].Battery.Charging {
+		t.Fatalf("设备电量聚合: %+v", snap.Devices)
+	}
+
+	te.now = te.now.Add(21 * time.Minute)
+	if snap = te.snapshot(t); len(snap.Devices) != 0 {
+		t.Fatalf("过期 device 事件应从快照消失: %+v", snap.Devices)
 	}
 }

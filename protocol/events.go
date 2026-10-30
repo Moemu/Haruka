@@ -21,6 +21,7 @@ const (
 	TypeActivity  = "activity"
 	TypeLocation  = "location"
 	TypeManual    = "manual"
+	TypeDevice    = "device"
 
 	StateActive = "active"
 	StateAway   = "away"
@@ -64,8 +65,14 @@ type ActivityData struct {
 	Kind     string `json:"kind"` // ide | browser | app | private | idle | none
 	App      string `json:"app,omitempty"`
 	Category string `json:"category,omitempty"`
-	Project  string `json:"project,omitempty"`
 	FileType string `json:"file_type,omitempty"`
+}
+
+// DeviceData 是设备自述状态（电量等）。battery_level 为 0～100；无电池的设备
+// （台式机）不发 device 事件，charging 只在为 true 时携带。
+type DeviceData struct {
+	BatteryLevel int  `json:"battery_level"`
+	Charging     bool `json:"charging,omitempty"`
 }
 
 type LocationData struct {

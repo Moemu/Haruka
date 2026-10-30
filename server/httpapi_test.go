@@ -339,7 +339,7 @@ func TestPublicResponseNoSensitiveFragments(t *testing.T) {
 	te.heartbeat(t, dev)
 	te.emit(t, dev, protocol.TypePresence, te.now, protocol.PresenceData{State: "active"})
 	te.emit(t, dev, protocol.TypeActivity, te.now,
-		protocol.ActivityData{Kind: "ide", App: "Visual Studio Code", Category: "coding", Project: "haruka"})
+		protocol.ActivityData{Kind: "ide", App: "Visual Studio Code", Category: "coding"})
 	te.emit(t, dev, protocol.TypeLocation, te.now,
 		protocol.LocationData{Source: "ip", Precision: "district", Country: "中国", Province: "上海市", City: "上海", District: "徐汇区"})
 	te.emit(t, dev, protocol.TypeManual, te.now,

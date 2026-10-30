@@ -20,6 +20,8 @@
     locationAsof: $("location-asof"),
     moodText: $("mood-text"),
     moodAsof: $("mood-asof"),
+    cardDevices: $("card-devices"),
+    devicesText: $("devices-text"),
     footerSync: $("footer-sync"),
     hiddenUntil: $("hidden-until"),
     errorTitle: $("error-title"),
@@ -119,6 +121,16 @@
     } else {
       setField(els.moodText, els.moodAsof, "心情平静如水~", "", false);
     }
+
+    // 设备状态：只列出上报了电量数据的在线设备；全部缺席时整卡隐藏。
+    var DEVICE_LABEL = { desktop: "💻 电脑", android: "📱 手机" };
+    var deviceLines = (snap.devices || []).map(function (d) {
+      var name = DEVICE_LABEL[d.kind] || "设备";
+      if (!d.battery) { return name; }
+      return name + " 电量 " + d.battery.level + "%" + (d.battery.charging ? " ⚡充电中" : "");
+    });
+    els.cardDevices.hidden = deviceLines.length === 0;
+    els.devicesText.textContent = deviceLines.join("\n") || "";
 
     var gen = new Date(snap.generated_at);
     els.footerSync.textContent = "数据时间 " +

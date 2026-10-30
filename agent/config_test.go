@@ -43,7 +43,6 @@ func TestValidateConfigRejects(t *testing.T) {
 		{"缺 token", func(c *Config) { c.Token = "" }, "token"},
 		{"缺 device_id", func(c *Config) { c.DeviceID = "" }, "device_id"},
 		{"location 模式", func(c *Config) { c.Location.Mode = "auto" }, "location.mode"},
-		{"unmapped 策略", func(c *Config) { c.Activity.Unmapped = "keep" }, "unmapped"},
 		{"非法时长", func(c *Config) { c.HeartbeatInterval = "soon" }, "heartbeat_interval"},
 	}
 	for _, tc := range cases {

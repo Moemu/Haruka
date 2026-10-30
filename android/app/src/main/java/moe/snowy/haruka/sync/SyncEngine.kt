@@ -6,6 +6,8 @@ import moe.snowy.haruka.data.SettingsRepository
 import moe.snowy.haruka.data.Spool
 import moe.snowy.haruka.net.ApiClient
 import moe.snowy.haruka.net.HttpResult
+import moe.snowy.haruka.protocol.ActivityData
+import moe.snowy.haruka.protocol.DeviceData
 import moe.snowy.haruka.protocol.Event
 import moe.snowy.haruka.protocol.TYPE_HEARTBEAT
 import moe.snowy.haruka.protocol.Wire
@@ -38,6 +40,8 @@ class SyncEngine(
         interactive: Boolean,
         keyguardLocked: Boolean,
         lastActiveMs: Long,
+        activity: ActivityData? = null,
+        device: DeviceData? = null,
         nowMs: Long = System.currentTimeMillis(),
     ): TickOutcome {
         // 未配置时绝不发起网络请求（防御 BootReceiver/Worker 的边缘路径）。
@@ -46,14 +50,16 @@ class SyncEngine(
         }
         val presence = presenceSample(interactive, keyguardLocked, nowMs, lastActiveMs)
 
-        // heartbeat 与 presence 是当下观测，随包实时生成，不占 spool。
-        val heartbeat = Wire.heartbeatEvent(spool.nextSeq(), nowMs)
-        val presenceEvent = Wire.presenceEvent(spool.nextSeq(), nowMs, presence)
-
-        val backlog = spool.peek(BATCH_CAP - 2)
+        // 实时观测（heartbeat/presence/activity/device）随包生成，不占 spool。
+        val realtime = buildList {
+            add(Wire.heartbeatEvent(spool.nextSeq(), nowMs))
+            add(Wire.presenceEvent(spool.nextSeq(), nowMs, presence))
+            activity?.let { add(Wire.activityEvent(spool.nextSeq(), nowMs, it)) }
+            device?.let { add(Wire.deviceEvent(spool.nextSeq(), nowMs, it)) }
+        }
+        val backlog = spool.peek(BATCH_CAP - realtime.size)
         val events = buildList {
-            add(heartbeat)
-            add(presenceEvent)
+            addAll(realtime)
             backlog.forEach { row ->
                 add(Event(id = row.id, seq = row.seq, ts = row.ts, type = row.type, data = Wire.json.parseToJsonElement(row.data)))
             }

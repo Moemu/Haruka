@@ -17,8 +17,8 @@ func TestActivityEligibilityBySourceCapability(t *testing.T) {
 		elapsed                    time.Duration
 		want                       string
 	}{
-		{"active", "ok", "active", 0, "在 IDE 里写 极光"},
-		{"unsupported", "unsupported", "", 0, "前台应用：IDE · 项目：极光"},
+		{"active", "ok", "active", 0, "正在使用 IDE"},
+		{"unsupported", "unsupported", "", 0, "前台应用：IDE"},
 		{"away", "unsupported", "away", 0, ""},
 		{"unreported", "", "", 0, ""},
 		{"failed", "degraded", "", 0, ""},
@@ -36,7 +36,7 @@ func TestActivityEligibilityBySourceCapability(t *testing.T) {
 			}
 			te.now = te.now.Add(tc.elapsed)
 			te.heartbeat(t, dev)
-			te.emit(t, dev, protocol.TypeActivity, te.now, protocol.ActivityData{Kind: "ide", App: "IDE", Project: "极光"})
+			te.emit(t, dev, protocol.TypeActivity, te.now, protocol.ActivityData{Kind: "ide", App: "IDE"})
 			if tc.name == "expired-presence" {
 				if err := te.e.SetDeviceCapability(dev.ID, tc.capability); err != nil {
 					t.Fatal(err)

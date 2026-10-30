@@ -18,6 +18,7 @@ type PublicStatus struct {
 	Location    *LocationV `json:"location"`
 	Activity    *ActivityV `json:"activity"`
 	Mood        *MoodV     `json:"mood"`
+	Devices     []DeviceV  `json:"devices,omitempty"`
 	GeneratedAt string     `json:"generated_at"`
 }
 
@@ -44,6 +45,18 @@ type MoodV struct {
 	Mood  string `json:"mood"`
 	Text  string `json:"text,omitempty"`
 	Until string `json:"until"`
+}
+
+// DeviceV 是一台在线设备的自述状态；Battery 为空表示该设备没有上报电量
+// （台式机不发 device 事件）。
+type DeviceV struct {
+	Kind    string    `json:"kind"`
+	Battery *BatteryV `json:"battery,omitempty"`
+}
+
+type BatteryV struct {
+	Level    int  `json:"level"`
+	Charging bool `json:"charging,omitempty"`
 }
 
 // Snapshot 读时重算过期（设计案 7.1 节）：内存与缓存只是加速，
@@ -89,6 +102,7 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 		presenceValid bool
 		activity      *stateRow
 		location      *stateRow
+		device        *stateRow
 	}
 	states := make([]devState, 0, len(devices))
 	for _, d := range devices {
@@ -108,6 +122,11 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 			return nil, err
 		} else if row != nil && row.ts.Add(observationTTL(d, protocol.TypeActivity)).After(now) {
 			st.activity = row
+		}
+		if row, err := currentState(tx, d.ID, protocol.TypeDevice); err != nil {
+			return nil, err
+		} else if row != nil && row.ts.Add(observationTTL(d, protocol.TypeDevice)).After(now) {
+			st.device = row
 		}
 		if d.LocationPolicy != "off" { // off 设备的位置一律排除（设计案 6.3 节）
 			if row, err := currentState(tx, d.ID, protocol.TypeLocation); err != nil {
@@ -266,6 +285,24 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 		}
 	}
 
+	// devices：在线设备的自述状态。没有电量数据的设备（台式机不发 device 事件）
+	// 不进列表——列表的意义就是电量这类「设备侧状态」。
+	var devStatuses []DeviceV
+	for _, st := range states {
+		if !st.online || st.device == nil {
+			continue
+		}
+		var dd protocol.DeviceData
+		if json.Unmarshal([]byte(st.device.data), &dd) != nil || dd.BatteryLevel <= 0 {
+			continue
+		}
+		devStatuses = append(devStatuses, DeviceV{
+			Kind:    st.dev.Kind,
+			Battery: &BatteryV{Level: dd.BatteryLevel, Charging: dd.Charging},
+		})
+	}
+	out.Devices = devStatuses
+
 	// manual：全局单条，未清除且未过期。
 	var updatedTS, data sql.NullString
 	var cleared bool
@@ -288,7 +325,7 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 
 // activityDisplay 把 activity 事件渲染为展示文案。neutral 为真时只陈述
 // 「前台应用」事实（来源设备 presence 明确不支持，无法确认用户在操作）；
-// 返回空串表示不展示。
+// 返回空串表示不展示。动词按类别选择（media 刷、music 听、coding 写代码…）。
 func activityDisplay(dataJSON string, neutral bool) string {
 	var d protocol.ActivityData
 	if json.Unmarshal([]byte(dataJSON), &d) != nil {
@@ -299,33 +336,39 @@ func activityDisplay(dataJSON string, neutral bool) string {
 		case d.Kind == "private":
 			return "前台应用：私密应用"
 		case d.App != "":
-			if d.Kind == "ide" && d.Project != "" {
-				return fmt.Sprintf("前台应用：%s · 项目：%s", d.App, d.Project)
-			}
 			return "前台应用：" + d.App
 		case d.Kind == "browser":
 			return "前台应用：浏览器"
 		}
 		return ""
 	}
-	switch d.Kind {
-	case "ide":
-		if d.Project != "" {
-			return fmt.Sprintf("在 %s 里写 %s", d.App, d.Project)
-		}
-		return fmt.Sprintf("在 %s 写代码", d.App)
-	case "browser":
-		return "正在浏览网页"
-	case "private":
+	if d.Kind == "private" {
 		return "使用私密应用"
-	case "idle":
-		return "挂机中"
-	case "app":
-		if d.App != "" {
-			return fmt.Sprintf("正在使用 %s", d.App)
-		}
 	}
-	return ""
+	if d.Kind == "idle" {
+		return "挂机中"
+	}
+	if d.App == "" {
+		if d.Kind == "browser" {
+			return "正在浏览网页"
+		}
+		return ""
+	}
+	switch d.Category {
+	case "coding":
+		return fmt.Sprintf("正在用 %s 写代码", d.App)
+	case "browsing":
+		return fmt.Sprintf("正在用 %s 网上冲浪", d.App)
+	case "writing":
+		return fmt.Sprintf("正在用 %s 写东西", d.App)
+	case "design":
+		return fmt.Sprintf("正在用 %s 画画", d.App)
+	case "media":
+		return fmt.Sprintf("正在刷 %s", d.App)
+	case "music":
+		return fmt.Sprintf("正在听 %s", d.App)
+	}
+	return fmt.Sprintf("正在使用 %s", d.App)
 }
 
 func locationDisplay(ld protocol.LocationData) string {

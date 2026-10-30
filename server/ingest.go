@@ -86,6 +86,8 @@ func canonicalEventData(ev *protocol.Event) error {
 		data = &protocol.LocationData{}
 	case protocol.TypeManual:
 		data = &protocol.ManualData{}
+	case protocol.TypeDevice:
+		data = &protocol.DeviceData{}
 	default:
 		return errValidation
 	}
@@ -147,12 +149,9 @@ func validateEvent(ev *protocol.Event) error {
 			return err
 		}
 		switch d.Category {
-		case "coding", "writing", "browsing", "design", "meeting", "private", "other", "":
+		case "coding", "writing", "browsing", "design", "meeting", "media", "music", "private", "other", "":
 		default:
 			return fmt.Errorf("%w: activity.category 非法", errValidation)
-		}
-		if err := checkProject(d.Project); err != nil {
-			return err
 		}
 		if d.FileType != "" {
 			ok := len(d.FileType) >= 2 && len(d.FileType) <= 9 && d.FileType[0] == '.'
@@ -234,6 +233,15 @@ func validateEvent(ev *protocol.Event) error {
 			}
 		}
 		return nil
+	case protocol.TypeDevice:
+		var d protocol.DeviceData
+		if err := decodeStrict(ev.Data, &d); err != nil {
+			return err
+		}
+		if d.BatteryLevel < 0 || d.BatteryLevel > 100 {
+			return fmt.Errorf("%w: battery_level 超界", errValidation)
+		}
+		return nil
 	default:
 		return fmt.Errorf("%w: 未知事件类型 %q", errValidation, ev.Type)
 	}
@@ -278,30 +286,6 @@ func checkDisplayString(field, v string, maxRunes int) error {
 		if unicode.IsControl(c) {
 			return fmt.Errorf("%w: %s 含控制字符", errValidation, field)
 		}
-	}
-	return nil
-}
-
-// checkProject 校验项目别名字符集：字母数字、下划线、连字符、空格与常用汉字。
-// 路径分隔符、点号等一律拒绝（../etc/passwd 这类反例由 fixture 固化）。
-func checkProject(v string) error {
-	if v == "" {
-		return nil
-	}
-	if len([]rune(v)) > 32 {
-		return fmt.Errorf("%w: project 过长", errValidation)
-	}
-	for _, c := range v {
-		switch {
-		case c >= 'A' && c <= 'Z', c >= 'a' && c <= 'z', c >= '0' && c <= '9':
-		case c == '_' || c == '-' || c == ' ':
-		case c >= 0x4e00 && c <= 0x9fa5:
-		default:
-			return fmt.Errorf("%w: project 含非法字符 %q", errValidation, c)
-		}
-	}
-	if isCoordPair(v) {
-		return fmt.Errorf("%w: project 疑似坐标", errValidation)
 	}
 	return nil
 }
@@ -411,7 +395,7 @@ func (e *Engine) IngestEnvelope(device Device, clientIP net.IP, env *protocol.En
 			if err := e.applyManual(tx, device, ev, receivedAt); err != nil {
 				return 0, err
 			}
-		default: // presence / activity / location
+		default: // presence / activity / device
 			if ev.Type == protocol.TypeLocation && policy == "off" {
 				// off 设备：位置事件仅入库，禁止刷新实时态（设计案 6.3 节，
 				// 「关闭定位」由服务端强制执行，不依赖客户端自觉）。
@@ -590,8 +574,8 @@ func (e *Engine) Hide(until *time.Time) error {
 	if err := stateSet(tx, "hide_at", formatTime(now)); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(`DELETE FROM current_state WHERE type IN (?, ?)`,
-		protocol.TypeLocation, protocol.TypeActivity); err != nil {
+	if _, err := tx.Exec(`DELETE FROM current_state WHERE type IN (?, ?, ?)`,
+		protocol.TypeLocation, protocol.TypeActivity, protocol.TypeDevice); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(`UPDATE manual_state SET cleared = 1, cleared_ts = ?, data = NULL, until = NULL WHERE id = 1`,
@@ -723,14 +707,14 @@ func newer(newTS time.Time, newSeq uint64, oldTS time.Time, oldSeq uint64) bool 
 
 func observationTTL(device Device, typ string) time.Duration {
 	switch typ {
-	case protocol.TypePresence:
+	case protocol.TypePresence, protocol.TypeActivity, protocol.TypeDevice:
+		// activity/device 随低频心跳上报的设备（Android 默认 15 分钟）也要能活到
+		// 下一拍；presence 的 active 判定会在设备真正空闲时先行隐藏活动展示。
 		ttl := 2 * device.Interval
 		if ttl < 10*time.Minute {
 			ttl = 10 * time.Minute
 		}
 		return ttl
-	case protocol.TypeActivity:
-		return 10 * time.Minute
 	case protocol.TypeLocation:
 		return locationTTL(device)
 	}

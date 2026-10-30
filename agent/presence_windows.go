@@ -18,14 +18,29 @@ var (
 	procGetWindowThreadProcessId   = user32.NewProc("GetWindowThreadProcessId")
 	procGetWindowTextLengthW       = user32.NewProc("GetWindowTextLengthW")
 	procGetWindowTextW             = user32.NewProc("GetWindowTextW")
+	procOpenInputDesktop           = user32.NewProc("OpenInputDesktop")
+	procCloseDesktop               = user32.NewProc("CloseDesktop")
 	kernel32                       = syscall.NewLazyDLL("kernel32.dll")
 	procGetTickCount               = kernel32.NewProc("GetTickCount")
 	procOpenProcess                = kernel32.NewProc("OpenProcess")
 	procCloseHandle                = kernel32.NewProc("CloseHandle")
 	procQueryFullProcessImageNameW = kernel32.NewProc("QueryFullProcessImageNameW")
+	procGetSystemPowerStatus       = kernel32.NewProc("GetSystemPowerStatus")
 )
 
 const processQueryLimitedInformation = 0x1000
+
+// sessionLocked 报告控制台是否处于锁屏/安全桌面（锁屏、UAC 提权确认、
+// Ctrl+Alt+Del）。锁屏时输入桌面是 winsta0\Winlogon，普通用户进程打不开，
+// 以此判定——不依赖锁屏进程名（winlogon.exe 之类会随系统变化）。
+func sessionLocked() bool {
+	h, _, _ := procOpenInputDesktop.Call(0, 0, 0x0001 /*DESKTOP_READOBJECTS*/)
+	if h == 0 {
+		return true
+	}
+	procCloseDesktop.Call(h)
+	return false
+}
 
 // lastInputInfo 与 winuser.LASTINPUTINFO 对应；dwTime 是 GetTickCount 时域。
 type lastInputInfo struct {

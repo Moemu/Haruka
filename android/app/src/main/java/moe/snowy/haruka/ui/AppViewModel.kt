@@ -184,6 +184,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { c.settings.setHeartbeatMin(min) }
     }
 
+    /** 前台应用采集开关：纯本地开关，下次心跳生效；权限引导在设置页。 */
+    fun setActivityEnabled(enabled: Boolean) {
+        viewModelScope.launch { c.settings.setActivityEnabled(enabled) }
+    }
+
     // ---- 手动状态 ----
 
     fun publishManual(mood: String, text: String, untilMs: Long) {

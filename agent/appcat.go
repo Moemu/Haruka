@@ -1,8 +1,6 @@
 package agent
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"path/filepath"
 	"strings"
 )
@@ -15,6 +13,7 @@ type AppMeta struct {
 }
 
 // builtinApps 是内置进程映射表（键为小写进程名），用户配置 app_map 可覆盖或追加。
+// 常见应用尽量收录，避免状态页出现 raw exe 名；display 名用社区惯用简称。
 var builtinApps = map[string]AppMeta{
 	"idea64.exe":          {App: "IntelliJ IDEA", Category: "coding", IDE: "jetbrains"},
 	"idea.exe":            {App: "IntelliJ IDEA", Category: "coding", IDE: "jetbrains"},
@@ -39,6 +38,21 @@ var builtinApps = map[string]AppMeta{
 	"typora.exe":          {App: "Typora", Category: "writing"},
 	"obsidian.exe":        {App: "Obsidian", Category: "writing"},
 	"figma.exe":           {App: "Figma", Category: "design"},
+	"qq.exe":              {App: "QQ"},
+	"wechat.exe":          {App: "微信"},
+	"weixin.exe":          {App: "微信"},
+	"telegram.exe":        {App: "Telegram"},
+	"dingtalk.exe":        {App: "钉钉"},
+	"feishu.exe":          {App: "飞书"},
+	"lark.exe":            {App: "飞书"},
+	"discord.exe":         {App: "Discord"},
+	"bilibili.exe":        {App: "B 站", Category: "media"},
+	"cloudmusic.exe":      {App: "网易云音乐", Category: "music"},
+	"qqmusic.exe":         {App: "QQ音乐", Category: "music"},
+	"spotify.exe":         {App: "Spotify", Category: "music"},
+	"steam.exe":           {App: "Steam"},
+	"potplayermini64.exe": {App: "PotPlayer", Category: "media"},
+	"vlc.exe":             {App: "VLC", Category: "media"},
 }
 
 // defaultPrivateApps 是敏感应用默认清单（借鉴 live-dashboard 的 SECRET 级）：
@@ -54,8 +68,6 @@ var defaultPrivateApps = []string{
 type Classifier struct {
 	apps     map[string]AppMeta
 	private  []string
-	aliases  map[string]string
-	unmapped string
 	fileType bool
 }
 
@@ -72,8 +84,6 @@ func NewClassifier(rt *Runtime) *Classifier {
 	return &Classifier{
 		apps:     apps,
 		private:  private,
-		aliases:  rt.Cfg.Activity.Aliases,
-		unmapped: rt.Cfg.Activity.Unmapped,
 		fileType: rt.Cfg.Privacy.FileType,
 	}
 }
@@ -100,31 +110,12 @@ func (cl *Classifier) Classify(processBase, windowTitle string) ActivityResult {
 	case "coding":
 		if meta.IDE != "" {
 			res.Kind = "ide"
-			parsed := parseIDETitle(meta.IDE, windowTitle)
-			res.Project = cl.resolveProject(meta.IDE, parsed.Project)
-			if cl.fileType && parsed.FileExt != "" {
-				res.FileType = parsed.FileExt
+			if cl.fileType && meta.IDE == "vscode" {
+				res.FileType = parseVSCodeFileExt(windowTitle)
 			}
 		}
 	}
 	return res
-}
-
-// resolveProject 应用别名表；未命中走 unmapped 兜底（hidden / hash / null 都不外发原名）。
-func (cl *Classifier) resolveProject(ideID, project string) string {
-	if project == "" {
-		return ""
-	}
-	if alias, ok := cl.aliases[ideID+":"+project]; ok {
-		return alias
-	}
-	switch cl.unmapped {
-	case "hash":
-		sum := sha256.Sum256([]byte(ideID + ":" + project))
-		return "p-" + hex.EncodeToString(sum[:2])
-	default: // hidden / null
-		return ""
-	}
 }
 
 // ActivityResult 是 activity 事件的负载形态（与 protocol.ActivityData 字段一致）。
@@ -132,6 +123,5 @@ type ActivityResult struct {
 	Kind     string
 	App      string
 	Category string
-	Project  string
 	FileType string
 }

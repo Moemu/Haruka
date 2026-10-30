@@ -9,7 +9,7 @@
       "seq": 4822,
       "ts": "2026-10-03T13:59:42Z",
       "type": "activity",
-      "data": { "kind": "ide", "app": "IntelliJ IDEA", "category": "coding", "project": "aurora" }
+      "data": { "kind": "app", "app": "B 站", "category": "media" }
     }
   ]
 }

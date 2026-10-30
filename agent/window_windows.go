@@ -13,7 +13,7 @@ import (
 )
 
 // WindowCollector 读取前台窗口：进程名进内置映射表，窗口标题只在本地解析出
-// 项目名/扩展名后立即丢弃，标题原文永不出进程。
+// 文件扩展名后立即丢弃，标题原文永不出进程。
 type WindowCollector struct {
 	deps       Deps
 	classifier *Classifier
@@ -27,6 +27,17 @@ func (c *WindowCollector) Name() string           { return "window" }
 func (c *WindowCollector) Capability() Capability { return CapOK }
 
 func (c *WindowCollector) Tick(now time.Time) ([]protocol.Event, error) {
+	// 锁屏/安全桌面：前台窗口属于系统进程（winlogon.exe 之类），既无意义也不该
+	// 上报进程名——改报 idle，让状态页立刻切换到「挂机中」而不是挂着旧应用。
+	if sessionLocked() {
+		ev, err := protocol.NewEvent(protocol.TypeActivity, c.deps.Seq.Next(), now,
+			protocol.ActivityData{Kind: "idle"})
+		if err != nil {
+			return nil, err
+		}
+		return []protocol.Event{ev}, nil
+	}
+
 	hwnd, _, _ := procGetForegroundWindow.Call()
 	if hwnd == 0 {
 		// 会话锁定或无前台窗口：不产出活动事件，presence 负责表达该状态。
@@ -52,7 +63,6 @@ func (c *WindowCollector) Tick(now time.Time) ([]protocol.Event, error) {
 		Kind:     res.Kind,
 		App:      res.App,
 		Category: res.Category,
-		Project:  res.Project,
 		FileType: res.FileType,
 	})
 	if err != nil {

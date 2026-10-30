@@ -40,6 +40,8 @@ data class Settings(
      * 打开应用恢复定位采样）都必须尊重，与「被系统回收」区分。默认 true 兼容存量安装。
      */
     val serviceEnabled: Boolean = true,
+    /** 前台应用采集开关（默认关）：需「使用情况访问权限」，见 ForegroundApp。 */
+    val activityEnabled: Boolean = false,
 ) {
     val configured: Boolean
         get() = serverUrl.isNotBlank() && deviceId.isNotBlank() && deviceToken.isNotBlank()
@@ -66,6 +68,7 @@ class SettingsRepository(private val context: Context) {
         val manualCleared = androidx.datastore.preferences.core.booleanPreferencesKey("manual_cleared")
         val pendingControl = stringPreferencesKey("pending_control")
         val serviceEnabled = androidx.datastore.preferences.core.booleanPreferencesKey("service_enabled")
+        val activityEnabled = androidx.datastore.preferences.core.booleanPreferencesKey("activity_enabled")
     }
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
@@ -86,6 +89,7 @@ class SettingsRepository(private val context: Context) {
             manualCleared = p[K.manualCleared] ?: true,
             pendingControl = p[K.pendingControl] ?: "",
             serviceEnabled = p[K.serviceEnabled] ?: true,
+            activityEnabled = p[K.activityEnabled] ?: false,
         )
     }
 
@@ -134,5 +138,9 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setServiceEnabled(enabled: Boolean) = context.dataStore.edit {
         it[K.serviceEnabled] = enabled
+    }
+
+    suspend fun setActivityEnabled(enabled: Boolean) = context.dataStore.edit {
+        it[K.activityEnabled] = enabled
     }
 }

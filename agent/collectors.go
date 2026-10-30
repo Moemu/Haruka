@@ -16,6 +16,9 @@ func NewCollectors(deps Deps, rt *Runtime) []TickCollector {
 	if rt.Cfg.Collectors.Activity {
 		out = append(out, NewWindowCollector(deps, NewClassifier(rt)))
 	}
+	// device（电量等设备自述状态）不受 collectors 开关控制：开销可忽略且无隐私面，
+	// 无电池的平台如实不产出事件。
+	out = append(out, NewDeviceCollector(deps))
 	if rt.Cfg.Collectors.Location {
 		loc := NewLocationCollector(deps, rt.Cfg.Location.Mode)
 		loc.serverURL = rt.ServerURL
@@ -37,5 +40,6 @@ func CollectorIntervals(rt *Runtime) map[string]time.Duration {
 		"presence": rt.Heartbeat,
 		"window":   rt.WindowTick,
 		"location": rt.LocationInt,
+		"device":   rt.Heartbeat,
 	}
 }

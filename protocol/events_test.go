@@ -71,6 +71,7 @@ func TestFixtures(t *testing.T) {
 	valid := []string{
 		"valid-presence.json", "valid-activity.json", "valid-location-city.json",
 		"valid-location-district.json", "valid-manual.json", "valid-heartbeat.json",
+		"valid-device.json",
 	}
 	for _, name := range valid {
 		var env Envelope
@@ -82,7 +83,7 @@ func TestFixtures(t *testing.T) {
 			t.Errorf("%s: bad envelope %+v", name, env)
 		}
 	}
-	invalid := []string{"invalid-unknown-field.json", "invalid-location-coords.json", "invalid-project-pattern.json"}
+	invalid := []string{"invalid-unknown-field.json", "invalid-location-coords.json", "invalid-device-battery.json"}
 	for _, name := range invalid {
 		var env map[string]any
 		if err := loadFixture(t, name, &env); err != nil {

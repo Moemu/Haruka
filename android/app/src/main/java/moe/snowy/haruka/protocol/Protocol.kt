@@ -25,6 +25,7 @@ const val TYPE_PRESENCE = "presence"
 const val TYPE_ACTIVITY = "activity"
 const val TYPE_LOCATION = "location"
 const val TYPE_MANUAL = "manual"
+const val TYPE_DEVICE = "device"
 
 const val STATE_ACTIVE = "active"
 const val STATE_AWAY = "away"
@@ -84,6 +85,21 @@ data class ManualData(
     @SerialName("clear") val clear: Boolean = false,
 )
 
+/** activity 负载（契约源 protocol/events.go）：kind 必填，app/category 省略即空。 */
+@Serializable
+data class ActivityData(
+    @SerialName("kind") val kind: String,
+    @SerialName("app") val app: String? = null,
+    @SerialName("category") val category: String? = null,
+)
+
+/** 设备自述状态：电量必填，charging 只在为 true 时携带（对齐 Go omitempty）。 */
+@Serializable
+data class DeviceData(
+    @SerialName("battery_level") val batteryLevel: Int,
+    @SerialName("charging") val charging: Boolean = false,
+)
+
 @Serializable
 object HeartbeatData
 
@@ -128,6 +144,12 @@ object Wire {
 
     fun locationEvent(seq: Long, nowMs: Long, data: LocationData) =
         event(TYPE_LOCATION, seq, nowMs, json.encodeToJsonElement(LocationData.serializer(), data))
+
+    fun activityEvent(seq: Long, nowMs: Long, data: ActivityData) =
+        event(TYPE_ACTIVITY, seq, nowMs, json.encodeToJsonElement(ActivityData.serializer(), data))
+
+    fun deviceEvent(seq: Long, nowMs: Long, data: DeviceData) =
+        event(TYPE_DEVICE, seq, nowMs, json.encodeToJsonElement(DeviceData.serializer(), data))
 
     fun manualEvent(seq: Long, nowMs: Long, data: ManualData) =
         event(TYPE_MANUAL, seq, nowMs, json.encodeToJsonElement(ManualData.serializer(), data))

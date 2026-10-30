@@ -43,8 +43,6 @@ type Config struct {
 	} `yaml:"privacy"`
 
 	Activity struct {
-		Aliases     map[string]string  `yaml:"aliases"`
-		Unmapped    string             `yaml:"unmapped"` // hidden | hash | null
 		PrivateApps []string           `yaml:"private_apps"`
 		AppMap      map[string]AppMeta `yaml:"app_map"`
 	} `yaml:"activity"`
@@ -83,7 +81,6 @@ func defaultConfig() Config {
 	c.Collectors.Location = false
 	c.Location.Mode = "server"
 	c.Privacy.AwayThreshold = "5m"
-	c.Activity.Unmapped = "hidden"
 	c.Spool.MaxAge = "168h"
 	c.Spool.MaxSize = "10MB"
 	return c
@@ -172,11 +169,6 @@ func ValidateConfig(cfg Config) (Runtime, error) {
 	}
 	if cfg.Location.Override != "" || cfg.Privacy.HomeDistrict != "" {
 		return rt, fmt.Errorf("location.override 和 privacy.home_district 尚未实现，请留空")
-	}
-	switch cfg.Activity.Unmapped {
-	case "hidden", "hash", "null":
-	default:
-		return rt, fmt.Errorf("activity.unmapped 只能是 hidden、hash 或 null")
 	}
 	return rt, nil
 }

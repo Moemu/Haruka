@@ -1,5 +1,5 @@
 # Haruka 桌面采集端配置。填写登记设备时获得的 id 和 token。
-# 窗口标题只在本机解析；公开项目名只来自下方 aliases。
+# 窗口标题只在本机解析扩展名后丢弃；进程名经内置映射表转为展示名。
 
 server: http://127.0.0.1:8080 # 本机试用；跨设备部署必须使用 HTTPS
 token: <设备令牌>
@@ -14,7 +14,7 @@ batch_size: 20
 
 collectors:
   presence: true           # 空闲检测（Windows 会话内 GetLastInputInfo）
-  activity: true           # 前台窗口与 IDE 项目（本地标题解析，标题原文不出进程）
+  activity: true           # 前台应用（本地标题解析，标题原文不出进程）
   location: false          # 本地 xdb 定位时开启；server/off 模式可关闭
 
 location:
@@ -26,10 +26,6 @@ privacy:
   file_type: false         # 是否上报正在编辑的文件扩展名
 
 activity:
-  aliases:                 # 键 = IDE 标识:标题中的项目名；值 = 可公开的别名
-    "vscode:my-project": "极光"
-    "jetbrains:my-project": "极光"
-  unmapped: hidden         # hidden | hash | null（未映射与歧义时都不外发原名）
   private_apps:            # 追加内置私密应用清单，命中即整级匿名化
     - "*Bank*"
   app_map:                 # 追加内置映射表（键为小写进程名）

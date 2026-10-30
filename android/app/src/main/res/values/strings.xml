@@ -54,6 +54,10 @@
 
     <!-- 采集开关 -->
     <string name="collector_location">定位</string>
+    <string name="collector_activity">前台应用</string>
+    <string name="activity_toggle">上报前台应用名称</string>
+    <string name="activity_hint">采集正在使用的应用名（如「正在刷 B 站」），只上报应用展示名，不含窗口内容；需授予「使用情况访问权限」。锁屏时不采集。</string>
+    <string name="activity_grant">去授予「使用情况访问权限」</string>
     <string name="location_mode_server">服务端解析</string>
     <string name="location_mode_local">设备反解</string>
     <string name="location_mode_off">关闭</string>

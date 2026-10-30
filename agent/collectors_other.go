@@ -28,3 +28,7 @@ func NewPresenceCollector(deps Deps, awayAfter time.Duration) TickCollector {
 func NewWindowCollector(deps Deps, classifier *Classifier) TickCollector {
 	return stubCollector{name: "window"}
 }
+
+func NewDeviceCollector(deps Deps) TickCollector {
+	return stubCollector{name: "device"}
+}

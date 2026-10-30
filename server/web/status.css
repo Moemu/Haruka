@@ -208,6 +208,7 @@ body {
 .card-asof { margin: 0; color: var(--muted); font-size: 0.85rem; }
 .card-asof.stale::after { content: "（有点旧了）"; }
 .card-ghost { opacity: 0.75; border-style: dashed; }
+#devices-text { white-space: pre-line; }
 
 /* 独占一屏的卡片（隐身 / 不可用）：可见性由 body.mode-* 控制 */
 #page-hidden, #page-error {

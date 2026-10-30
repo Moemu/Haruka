@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,6 +52,7 @@ import moe.snowy.haruka.R
 import moe.snowy.haruka.data.LOCATION_LOCAL
 import moe.snowy.haruka.data.LOCATION_OFF
 import moe.snowy.haruka.data.LOCATION_SERVER
+import moe.snowy.haruka.sync.ForegroundApp
 
 /**
  * 页面三：设置（FlClash 式二级菜单）：入口列表进入各子页（服务器 / 采集 / 控制 / 关于），
@@ -152,6 +154,27 @@ fun SettingsCollectPage(vm: AppViewModel, onBack: () -> Unit) {
                 }
             }
             Text(stringResource(R.string.settings_heartbeat_hint), style = MaterialTheme.typography.bodySmall)
+        }
+        SettingsSection(stringResource(R.string.collector_activity)) {
+            val ctx = LocalContext.current
+            val granted = remember { ForegroundApp.usageAccessGranted(ctx) }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.activity_toggle), style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = settings.activityEnabled,
+                    onCheckedChange = { vm.setActivityEnabled(it) },
+                )
+            }
+            Text(stringResource(R.string.activity_hint), style = MaterialTheme.typography.bodySmall)
+            if (settings.activityEnabled && !granted) {
+                Button(onClick = { ForegroundApp.usageAccessSettings(ctx) }) {
+                    Text(stringResource(R.string.activity_grant))
+                }
+            }
         }
         SettingsSection(stringResource(R.string.collector_location)) {
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {

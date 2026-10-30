@@ -108,11 +108,19 @@ class HeartbeatService : Service() {
             return 0
         }
 
+        val interactive = interactiveNow()
+        val keyguardLocked = keyguardLockedNow()
         val outcome = container.engine.tick(
             settings = settings,
-            interactive = interactiveNow(),
-            keyguardLocked = keyguardLockedNow(),
+            interactive = interactive,
+            keyguardLocked = keyguardLocked,
             lastActiveMs = ScreenTracker.lastActiveCache,
+            // activity 采集是显式开关（敏感权限），锁屏/灭屏不采样；
+            // 电量无权限面，始终随拍。
+            activity = if (settings.activityEnabled) {
+                ForegroundApp.sample(this, now, interactive, keyguardLocked)
+            } else null,
+            device = ForegroundApp.battery(this),
         )
         val nextTick = System.currentTimeMillis() + settings.heartbeatMin * 60_000L
 

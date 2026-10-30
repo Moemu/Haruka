@@ -28,7 +28,7 @@
         "id": { "type": "string", "pattern": "^e_[0-9a-f]{32}$" },
         "seq": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
         "ts": { "type": "string", "format": "date-time" },
-        "type": { "enum": ["heartbeat", "presence", "activity", "location", "manual"] },
+        "type": { "enum": ["heartbeat", "presence", "activity", "location", "manual", "device"] },
         "data": true
       },
       "allOf": [
@@ -51,6 +51,10 @@
         {
           "if": { "properties": { "type": { "const": "manual" } } },
           "then": { "properties": { "data": { "$ref": "#/$defs/manualData" } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "device" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/deviceData" } } }
         }
       ]
     },
@@ -74,9 +78,17 @@
       "properties": {
         "kind": { "enum": ["ide", "browser", "app", "private", "idle", "none"] },
         "app": { "type": "string", "maxLength": 64 },
-        "category": { "enum": ["coding", "writing", "browsing", "design", "meeting", "private", "other", "", null] },
-        "project": { "type": ["string", "null"], "maxLength": 32, "pattern": "^[A-Za-z0-9_ -\\u4e00-\\u9fa5]*$" },
+        "category": { "enum": ["coding", "writing", "browsing", "design", "meeting", "media", "music", "private", "other", "", null] },
         "file_type": { "type": "string", "pattern": "^\\.[a-z0-9]{1,8}$" }
+      }
+    },
+    "deviceData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["battery_level"],
+      "properties": {
+        "battery_level": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "charging": { "type": "boolean" }
       }
     },
     "locationData": {

@@ -1,5 +1,5 @@
 # 服务端容器镜像：状态页经 go:embed 打进二进制，无前端构建。
-FROM golang:1.26.8 AS build
+FROM golang:1.26.10 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

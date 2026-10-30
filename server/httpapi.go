@@ -16,7 +16,7 @@ import (
 
 // 状态页静态资源随二进制分发（设计案 §10：独立页由 GET /status 提供）。
 //
-//go:embed web/status.html web/status.css web/status.js web/icon.webp
+//go:embed web/status.html web/status.css web/status.js web/icon.webp web/bg-desktop.webp web/bg-mobile.webp
 var webFiles embed.FS
 
 type webAsset struct {
@@ -27,7 +27,7 @@ type webAsset struct {
 var webAssets = map[string]webAsset{}
 
 func init() {
-	for _, name := range []string{"status.html", "status.css", "status.js", "icon.webp"} {
+	for _, name := range []string{"status.html", "status.css", "status.js", "icon.webp", "bg-desktop.webp", "bg-mobile.webp"} {
 		body, err := webFiles.ReadFile("web/" + name)
 		if err != nil {
 			panic(err) // go:embed 在编译期保证文件存在
@@ -53,26 +53,30 @@ func (e *Engine) Handler() http.Handler {
 	mux.HandleFunc("GET /status.js", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "status.js") })
 	mux.HandleFunc("GET /icon.webp", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "icon.webp") })
 	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "icon.webp") })
+	mux.HandleFunc("GET /bg-desktop.webp", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "bg-desktop.webp") })
+	mux.HandleFunc("GET /bg-mobile.webp", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "bg-mobile.webp") })
 	return mux
 }
 
 // serveWeb 输出内置状态页资源：no-cache + ETag 保证升级后页面立即生效；
-// HTML 额外带 CSP（仅字体样式放行 CDN，其余全部 self）与 no-referrer。
+// HTML 额外带 CSP（页面零外部依赖，全部 self）与 no-referrer。
 func (e *Engine) serveWeb(w http.ResponseWriter, r *http.Request, name string) {
 	a := webAssets[name]
 	switch name {
 	case "status.html":
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Content-Security-Policy",
-			"default-src 'self'; style-src 'self' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net; "+
-				"script-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'")
+			"default-src 'self'; style-src 'self'; script-src 'self'; "+
+				"img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 	case "status.css":
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	case "status.js":
 		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	case "icon.webp":
-		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Content-Type", "image/webp")
+	case "bg-desktop.webp", "bg-mobile.webp":
+		w.Header().Set("Content-Type", "image/webp")
 	}
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("ETag", a.etag)

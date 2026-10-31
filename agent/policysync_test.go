@@ -71,7 +71,7 @@ func TestLocationCollectorGatesOnPolicySync(t *testing.T) {
 	ps.mu.Lock()
 	ps.confirmed = "local"
 	ps.mu.Unlock()
-	loc.policy = ps
+	loc.deps.Policy = ps
 	// 确认后发送（whoami-ip 不可达 → 返回错误，证明确实发起了请求）。
 	if _, err := loc.Tick(time.Now()); err == nil {
 		t.Fatal("确认后应发起 whoami-ip 请求")

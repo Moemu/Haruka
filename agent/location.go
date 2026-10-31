@@ -17,7 +17,6 @@ type LocationCollector struct {
 	mode      string
 	serverURL string
 	geo       *geo.Searcher
-	policy    *PolicySync
 }
 
 func NewLocationCollector(deps Deps, mode string) *LocationCollector {
@@ -56,7 +55,7 @@ func (c *LocationCollector) Tick(now time.Time) ([]protocol.Event, error) {
 	}
 	// 策略必须已被服务端确认为 local 才发送本地解析的位置——
 	// 否则服务端可能仍在做 IP 派生，形成双源（设计案 6.3 节）。
-	if c.policy == nil || c.policy.Confirmed() != "local" {
+	if c.deps.Policy == nil || c.deps.Policy.Confirmed() != "local" {
 		return nil, nil
 	}
 	ipStr, err := FetchEgressIP(c.serverURL, 5*time.Second)

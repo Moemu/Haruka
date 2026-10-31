@@ -201,7 +201,7 @@ docker run -d --name haruka-server \
 
 上面的 `-p` 适合宿主机上的反向代理；Caddy 等以容器运行时，改为让两端加入同一 Docker 网络并去掉 `-p`。日志默认输出 stdout，`--log-opt` 让 Docker 轮转容器日志；裸机部署可在配置里设置 `log_file`，按 10MB 轮转并保留 1 个旧文件。
 
-`trusted_proxies` 只填写实际代理地址；`cors_origins` 只影响浏览器跨域读取，公开 API 本身没有访问鉴权。内置页面使用同源 API，无需 CORS 设置。
+`trusted_proxies` 只填写实际代理地址；`cors_origins` 只影响浏览器跨域读取（填 `*` 放行任意来源），公开 API 本身没有访问鉴权。内置页面使用同源 API，无需 CORS 设置。
 
 位置默认关闭。需要启用时，自行取得与当前 ip2region Go 绑定兼容的 `.xdb` 数据库，并遵守数据提供方许可：
 

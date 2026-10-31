@@ -472,3 +472,30 @@ func TestPublicResponseNoSensitiveFragments(t *testing.T) {
 	}
 	walk(decoded)
 }
+
+func TestCORSOriginAllowList(t *testing.T) {
+	r := httptest.NewRequest("GET", "/v1/public/status", nil)
+	r.Header.Set("Origin", "https://blog.snowy.moe")
+
+	// 未配置白名单：跨域读取被拒（无 Access-Control-Allow-Origin）。
+	te := newTestEnv(t, nil)
+	if got := te.e.corsOrigin(r); got != "" {
+		t.Errorf("未配置白名单时应拒绝，got %q", got)
+	}
+
+	// "*" 放行任意来源（公开数据、无凭据，浏览器仍拒发 Cookie）。
+	te = newTestEnv(t, func(c *Config) { c.CORSOrigins = []string{"*"} })
+	if got := te.e.corsOrigin(r); got != "https://blog.snowy.moe" {
+		t.Errorf(`"*" 应放行，got %q`, got)
+	}
+
+	// 显式白名单命中与未命中。
+	te = newTestEnv(t, func(c *Config) { c.CORSOrigins = []string{"https://blog.snowy.moe"} })
+	if got := te.e.corsOrigin(r); got != "https://blog.snowy.moe" {
+		t.Errorf("白名单命中应回显 origin，got %q", got)
+	}
+	r.Header.Set("Origin", "https://evil.example")
+	if got := te.e.corsOrigin(r); got != "" {
+		t.Errorf("白名单外应拒绝，got %q", got)
+	}
+}

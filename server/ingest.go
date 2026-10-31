@@ -239,6 +239,9 @@ func validateEvent(ev *protocol.Event) error {
 		if d.BatteryLevel < 0 || d.BatteryLevel > 100 {
 			return fmt.Errorf("%w: battery_level 超界", errValidation)
 		}
+		if d.Steps < 0 || d.Steps > 1_000_000 {
+			return fmt.Errorf("%w: steps 超界", errValidation)
+		}
 		return nil
 	default:
 		return fmt.Errorf("%w: 未知事件类型 %q", errValidation, ev.Type)

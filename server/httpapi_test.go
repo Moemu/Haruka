@@ -104,6 +104,10 @@ func TestIngestStrictValidation(t *testing.T) {
 			"type": "health",
 			"data": map[string]any{"bpm": 76},
 		},
+		"steps 越界": {
+			"type": "device",
+			"data": map[string]any{"battery_level": 85, "steps": -1},
+		},
 	}
 	for name, payload := range badPayloads {
 		t.Run(name, func(t *testing.T) {

@@ -70,9 +70,12 @@ type ActivityData struct {
 
 // DeviceData 是设备自述状态（电量等）。battery_level 为 0～100；无电池的设备
 // （台式机）不发 device 事件，charging 只在为 true 时携带。
+// steps 为当日累计步数（MIUI 计步 provider，5 分钟粒度），仅 Android 上报；
+// 0 与缺席等价，来源与判死记录见 docs/design.md §5.2。
 type DeviceData struct {
 	BatteryLevel int  `json:"battery_level"`
 	Charging     bool `json:"charging,omitempty"`
+	Steps        int  `json:"steps,omitempty"`
 }
 
 type LocationData struct {

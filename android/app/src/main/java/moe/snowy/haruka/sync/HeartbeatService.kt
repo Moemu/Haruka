@@ -116,11 +116,11 @@ class HeartbeatService : Service() {
             keyguardLocked = keyguardLocked,
             lastActiveMs = ScreenTracker.lastActiveCache,
             // activity 采集是显式开关（敏感权限），锁屏/灭屏不采样；
-            // 电量无权限面，始终随拍。
+            // 电量与步数随拍（READ_STEPS 为 normal 级，非 MIUI 静默缺席）。
             activity = if (settings.activityEnabled) {
                 ForegroundApp.sample(this, now, interactive, keyguardLocked)
             } else null,
-            device = ForegroundApp.battery(this),
+            device = ForegroundApp.battery(this).copy(steps = ForegroundApp.steps(this) ?: 0),
         )
         val nextTick = System.currentTimeMillis() + settings.heartbeatMin * 60_000L
 

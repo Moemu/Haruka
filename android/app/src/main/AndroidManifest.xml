@@ -15,6 +15,8 @@
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
+    <!-- 步数采样：MIUI 计步 provider，normal 级装即授；非 MIUI ROM 无此权限亦无碍 -->
+    <uses-permission android:name="miui.permission.READ_STEPS" />
 
     <application
         android:name=".HarukaApp"

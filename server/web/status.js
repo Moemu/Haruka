@@ -102,7 +102,9 @@
     name.textContent = DEVICE_LABEL[d.kind] || "设备";
     var sub = document.createElement("p");
     sub.className = "device-sub";
-    sub.textContent = charging ? "充电中" : (low ? "电量 " + level + "% · 该充电啦" : "电量 " + level + "%");
+    var subText = charging ? "充电中" : (low ? "电量 " + level + "% · 该充电啦" : "电量 " + level + "%");
+    if (d.steps > 0) { subText += " · 今日 " + d.steps + " 步"; }
+    sub.textContent = subText;
     meta.appendChild(name);
     meta.appendChild(sub);
     row.appendChild(meta);

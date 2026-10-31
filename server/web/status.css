@@ -142,7 +142,6 @@ body::before {
   padding: 8px 0 8px;
 }
 .card-wide { grid-column: span 2; }
-.card-ghost { grid-column: 1 / -1; }
 .card {
   background: color-mix(in srgb, var(--card) 68%, transparent);
   border: 1px solid color-mix(in srgb, var(--card-border) 60%, transparent);
@@ -156,7 +155,6 @@ body::before {
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .card { background: var(--card); border-color: var(--card-border); }
 }
-.card-ghost { opacity: 0.65; border-style: dashed; }
 
 /* 卡头是小标签，值才是主角：层级翻转 */
 .card h2 {
@@ -295,6 +293,6 @@ body.mode-hidden #page-hidden {
   }
   .hero { padding: 40px 0 36px; }
   .cards { grid-template-columns: 1fr; }
-  .card-wide, .card-ghost { grid-column: auto; }
+  .card-wide { grid-column: auto; }
   .week { gap: 16px; }
 }

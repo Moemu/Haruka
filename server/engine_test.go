@@ -455,7 +455,7 @@ func TestDeviceStatusAndCategoryVerbs(t *testing.T) {
 	te.heartbeat(t, phone)
 	te.emit(t, phone, protocol.TypePresence, te.now, protocol.PresenceData{State: protocol.StateActive, IdleMinutes: 0})
 	te.emit(t, phone, protocol.TypeActivity, te.now, protocol.ActivityData{Kind: "app", App: "B 站", Category: "media"})
-	te.emit(t, phone, protocol.TypeDevice, te.now, protocol.DeviceData{BatteryLevel: 85, Charging: true})
+	te.emit(t, phone, protocol.TypeDevice, te.now, protocol.DeviceData{BatteryLevel: 85, Charging: true, Steps: 4317})
 	pc := te.addDevice(t, protocol.KindDesktop, 10*time.Minute)
 	te.heartbeat(t, pc) // 台式机不发 device 事件
 
@@ -464,7 +464,7 @@ func TestDeviceStatusAndCategoryVerbs(t *testing.T) {
 		t.Fatalf("media 分类动词: %+v", snap.Activity)
 	}
 	if len(snap.Devices) != 1 || snap.Devices[0].Kind != "android" || snap.Devices[0].Battery == nil ||
-		snap.Devices[0].Battery.Level != 85 || !snap.Devices[0].Battery.Charging {
+		snap.Devices[0].Battery.Level != 85 || !snap.Devices[0].Battery.Charging || snap.Devices[0].Steps != 4317 {
 		t.Fatalf("设备电量聚合: %+v", snap.Devices)
 	}
 

@@ -9,7 +9,7 @@
       "seq": 4823,
       "ts": "2026-10-03T13:59:42Z",
       "type": "device",
-      "data": { "battery_level": 85, "charging": true }
+      "data": { "battery_level": 85, "charging": true, "steps": 4317 }
     }
   ]
 }

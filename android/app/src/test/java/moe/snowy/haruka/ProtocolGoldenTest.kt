@@ -32,6 +32,7 @@ class ProtocolGoldenTest {
         "valid-manual",
         "valid-location-city",
         "valid-location-district",
+        "valid-device",
     )
 
     @Test

@@ -52,6 +52,7 @@ type MoodV struct {
 type DeviceV struct {
 	Kind    string    `json:"kind"`
 	Battery *BatteryV `json:"battery,omitempty"`
+	Steps   int       `json:"steps,omitempty"`
 }
 
 type BatteryV struct {
@@ -294,10 +295,14 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 		if json.Unmarshal([]byte(st.device.data), &dd) != nil || dd.BatteryLevel <= 0 {
 			continue
 		}
-		devStatuses = append(devStatuses, DeviceV{
+		sv := DeviceV{
 			Kind:    st.dev.Kind,
 			Battery: &BatteryV{Level: dd.BatteryLevel, Charging: dd.Charging},
-		})
+		}
+		if dd.Steps > 0 {
+			sv.Steps = dd.Steps
+		}
+		devStatuses = append(devStatuses, sv)
 	}
 	out.Devices = devStatuses
 

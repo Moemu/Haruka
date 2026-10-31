@@ -93,11 +93,12 @@ data class ActivityData(
     @SerialName("category") val category: String? = null,
 )
 
-/** 设备自述状态：电量必填，charging 只在为 true 时携带（对齐 Go omitempty）。 */
+/** 设备自述状态：电量必填；charging/steps 只在非默认时携带（对齐 Go omitempty）。 */
 @Serializable
 data class DeviceData(
     @SerialName("battery_level") val batteryLevel: Int,
     @SerialName("charging") val charging: Boolean = false,
+    @SerialName("steps") val steps: Int = 0,
 )
 
 @Serializable

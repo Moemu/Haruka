@@ -17,6 +17,9 @@ import moe.snowy.haruka.protocol.DeviceData
  * - 前台应用：UsageStatsManager 事件流取最近一次 ACTIVITY_RESUMED（锁屏/亮屏不采样，
  *   无「使用情况访问权限」返回 null），包名经内置映射表或 PackageManager 显示名转展示名。
  * - 电量：系统粘性广播 ACTION_BATTERY_CHANGED，无需任何权限。
+ * - 步数：MIUI 计步 provider（content://com.miui.providers.steps/item，当日累计，
+ *   5 分钟粒度）；READ_STEPS 为 normal 级装即授，实测无需 ACTIVITY_RECOGNITION。
+ *   非 MIUI ROM / provider 缺席 / 任何异常一律 null（字段省略）。
  */
 object ForegroundApp {
 
@@ -113,6 +116,28 @@ object ForegroundApp {
         val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
             status == BatteryManager.BATTERY_STATUS_FULL
         return DeviceData(batteryLevel = pct.coerceIn(0, 100), charging = charging)
+    }
+
+    /** 当日累计步数；来源或权限不满足返回 null（调用方省略 steps 字段）。 */
+    fun steps(ctx: Context): Int? = try {
+        val dayStart = java.time.LocalDate.now()
+            .atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        ctx.contentResolver.query(
+            android.net.Uri.parse("content://com.miui.providers.steps/item"),
+            arrayOf("_steps"),
+            "_begin_time >= ?",
+            arrayOf(dayStart.toString()),
+            null,
+        )?.use { c ->
+            val iSteps = c.getColumnIndex("_steps")
+            var sum = 0
+            while (c.moveToNext()) {
+                if (iSteps >= 0) sum += c.getInt(iSteps)
+            }
+            sum
+        }
+    } catch (_: Throwable) {
+        null
     }
 
     private fun labelOf(ctx: Context, pkg: String): String? = try {

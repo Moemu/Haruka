@@ -48,8 +48,9 @@ type MoodV struct {
 }
 
 // DeviceV 是一台在线设备的自述状态；Battery 为空表示该设备没有上报电量
-// （台式机不发 device 事件）。
+// （台式机不发 device 事件）。Name 是登记时指定的设备名。
 type DeviceV struct {
+	Name    string    `json:"name,omitempty"`
 	Kind    string    `json:"kind"`
 	Battery *BatteryV `json:"battery,omitempty"`
 	Steps   int       `json:"steps,omitempty"`
@@ -296,6 +297,7 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 			continue
 		}
 		sv := DeviceV{
+			Name:    st.dev.Name,
 			Kind:    st.dev.Kind,
 			Battery: &BatteryV{Level: dd.BatteryLevel, Charging: dd.Charging},
 		}

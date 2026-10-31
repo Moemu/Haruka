@@ -99,7 +99,7 @@
     meta.className = "device-meta";
     var name = document.createElement("p");
     name.className = "device-name";
-    name.textContent = DEVICE_LABEL[d.kind] || "设备";
+    name.textContent = d.name || DEVICE_LABEL[d.kind] || "设备";
     var sub = document.createElement("p");
     sub.className = "device-sub";
     var subText = charging ? "充电中" : (low ? "电量 " + level + "% · 该充电啦" : "电量 " + level + "%");

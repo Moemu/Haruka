@@ -186,7 +186,7 @@ Haruka 的 Android 端按「不触发系统管控」设计：不持唤醒锁、�
 
 服务端与采集端可以运行在不同机器。此时将采集端的 `server` 改为自己的 HTTPS 地址。服务端监听回环地址，由反向代理终止 TLS；请在代理层配置限流和连接数限制。应用目前没有内置限流。
 
-容器部署：仓库自带多阶段 Dockerfile，状态页经 go:embed 打进二进制，镜像内无前端构建。注意容器内监听地址需改为 `0.0.0.0:8080`：
+容器部署：仓库自带多阶段 Dockerfile，状态页经 go:embed 打进二进制，镜像内无前端构建。推 `v*` 标签时 CI 会把服务端镜像发布到 GHCR，可直接拉取：`docker pull ghcr.io/moemu/haruka:latest`。注意容器内监听地址需改为 `0.0.0.0:8080`：
 
 ```sh
 docker build -t haruka-server .
@@ -229,7 +229,6 @@ docker run -d --name haruka-server \
 
 ## 后续计划🌱
 
-- [ ] 服务端容器镜像的自动发布流水线（Android APK 已由 tag 触发 CI 构建签名）。
 - [ ] 内置限流与服务端日志轮转。
 - [ ] 定位手动覆盖；IP 定位在真实出口 IP 场景下的验证。
 

@@ -463,7 +463,8 @@ func TestDeviceStatusAndCategoryVerbs(t *testing.T) {
 	if snap.Activity == nil || snap.Activity.Display != "正在刷 B 站" {
 		t.Fatalf("media 分类动词: %+v", snap.Activity)
 	}
-	if len(snap.Devices) != 1 || snap.Devices[0].Kind != "android" || snap.Devices[0].Battery == nil ||
+	if len(snap.Devices) != 1 || snap.Devices[0].Kind != "android" || snap.Devices[0].Name != "dev-android" ||
+		snap.Devices[0].Battery == nil ||
 		snap.Devices[0].Battery.Level != 85 || !snap.Devices[0].Battery.Charging || snap.Devices[0].Steps != 4317 {
 		t.Fatalf("设备电量聚合: %+v", snap.Devices)
 	}

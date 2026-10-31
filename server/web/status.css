@@ -143,6 +143,8 @@ body::before {
 }
 .card-wide { grid-column: span 2; }
 .card {
+  display: flex;
+  flex-direction: column; /* 正文垂直居中、asof 钉底，见下 */
   background: color-mix(in srgb, var(--card) 68%, transparent);
   border: 1px solid color-mix(in srgb, var(--card-border) 60%, transparent);
   border-radius: 16px;
@@ -150,6 +152,8 @@ body::before {
   backdrop-filter: blur(16px) saturate(1.15);
   -webkit-backdrop-filter: blur(16px) saturate(1.15);
 }
+/* display:flex 会盖过 UA 的 [hidden]，显式补回（card-coding/devices 用它整卡隐藏） */
+.card[hidden] { display: none; }
 
 /* 毛玻璃不可用（旧浏览器/禁用 GPU）时回退不透明卡片，可读性优先 */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -186,17 +190,25 @@ body::before {
 }
 
 .card-body {
-  margin: 0 0 8px;
+  /* 上下 auto 边距均分剩余空间：正文在标题与卡底之间垂直居中，
+     并把 asof 推到卡底——同排卡片高矮不一时正文与更新时间各自对齐 */
+  margin: auto 0;
   font-size: 1.15rem;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 #card-activity .card-body { font-size: 1.35rem; }
-.card-asof { margin: 0; color: var(--muted); font-size: 0.8rem; }
+.card-asof {
+  margin: 8px 0 0;
+  min-height: 1.6em; /* 空时也占一行的位置：无 asof 的卡片正文与有 asof 的对齐 */
+  color: var(--muted);
+  font-size: 0.8rem;
+}
 .card-asof.stale::after { content: "（有点旧了）"; }
 
 /* 设备电量环 */
 .device-list {
+  margin: auto 0; /* 与 card-body 同法：卡内垂直居中 */
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px 16px;
@@ -301,4 +313,10 @@ body.mode-hidden #page-hidden {
   .cards { grid-template-columns: 1fr; }
   .card-wide { grid-column: auto; }
   .week { gap: 16px; }
+}
+
+/* 矮视口再收一档纵向留白：桌面整页免滚动不赌内容长度（两行正文 + 多设备也放得下） */
+@media (max-height: 800px) {
+  .wrap { padding: 20px 24px 20px; }
+  .hero { padding: 24px 0 20px; }
 }

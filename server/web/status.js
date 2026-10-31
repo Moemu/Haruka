@@ -76,6 +76,19 @@
     return node;
   }
 
+  // 设备 kind → 环心图标（24 视窗线性形，与卡头 chip 图标同体系）。
+  // 圆环本身继续表达电量，环心只作设备身份；未知 kind 回退桌面形。
+  var KIND_ICON = {
+    desktop: [
+      ["rect", { x: 2.5, y: 7.5, width: 16, height: 9, rx: 2 }],
+      ["path", { d: "M22 11v2" }],
+    ],
+    android: [
+      ["rect", { x: 7, y: 2.5, width: 10, height: 19, rx: 2.5 }],
+      ["path", { d: "M11 18.5h2" }],
+    ],
+  };
+
   function deviceRow(d) {
     var level = Math.max(0, Math.min(100, d.battery ? d.battery.level : 0));
     var charging = !!(d.battery && d.battery.charging);
@@ -92,7 +105,11 @@
       "stroke-dashoffset": (RING_C * (1 - level / 100)).toFixed(1),
       transform: "rotate(-90 32 32)",
     }));
-    svg.appendChild(svgEl("text", { x: 32, y: 38, "class": "ring-num" }, String(level)));
+    var icon = svgEl("svg", { x: 20, y: 20, width: 24, height: 24, viewBox: "0 0 24 24", "class": "ring-icon" });
+    (KIND_ICON[d.kind] || KIND_ICON.desktop).forEach(function (shape) {
+      icon.appendChild(svgEl(shape[0], shape[1]));
+    });
+    svg.appendChild(icon);
     row.appendChild(svg);
 
     var meta = document.createElement("div");

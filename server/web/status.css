@@ -211,7 +211,13 @@ body::before {
   stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease;
 }
-.ring-num { fill: var(--ink); font-size: 17px; font-weight: 600; text-anchor: middle; }
+.ring-icon {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .device.charging .ring-arc { animation: ringPulse 2.2s ease-in-out infinite; }
 .device.low .ring-arc { stroke: var(--accent); }
 .device.low .device-sub { color: var(--accent); }

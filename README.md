@@ -18,7 +18,7 @@ Haruka 是一个自托管的个人状态同步服务。她从你的常用设备�
 
 你可以用她给博客报个平安，也可以通过公开 API 为自己的站点制作组件。状态页走纸面极简风格，亮暗主题和移动端布局齐备，每 30 秒自动更新。
 
-![Haruka 状态页（暗色主题）](.github/assets/status-page.webp)
+![官方示例](.github/assets/status-page.webp)
 
 **当前为开发预览**：Windows 采集端与 Android 应用可用，Linux 桌面端只上报在线（已取消完整适配）。建议先在本机试用，再配置公网部署。
 

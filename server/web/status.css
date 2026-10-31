@@ -34,6 +34,8 @@
 body {
   margin: 0;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column; /* .wrap 用 margin:auto 在视口内垂直居中；内容超高时退化为自然滚动 */
   background: var(--bg);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
@@ -54,7 +56,7 @@ body::before {
 
 .wrap {
   max-width: 880px;
-  margin: 0 auto;
+  margin: auto; /* 弹性列内四向居中：高分辨率下内容块在壁纸中构图居中 */
   padding: 24px 24px 32px;
 }
 
@@ -319,4 +321,11 @@ body.mode-hidden #page-hidden {
 @media (max-height: 800px) {
   .wrap { padding: 20px 24px 20px; }
   .hero { padding: 24px 0 20px; }
+}
+
+/* 大屏放宽版心并整体放大一档：高分辨率下内容与壁纸比例相称。
+   与上面的矮视口修剪互斥（min-height 820 > max-height 800），互不干扰 */
+@media (min-width: 1440px) and (min-height: 820px) {
+  html { font-size: 18px; }
+  .wrap { max-width: 1064px; }
 }

@@ -58,10 +58,19 @@ fun OnboardingScreen(vm: AppViewModel, onDone: () -> Unit) {
     var checkOk by remember { mutableStateOf(false) }
     var checking by remember { mutableStateOf(false) }
 
+    // 第 4 步权限链：先申请身体活动（步数采集需要，MIUI 计步 provider 校验运行时授权），
+    // 回调里再走通知申请；拒绝都只降级对应功能，不阻塞向导。
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         checkMsg = if (granted) "" else context.getString(R.string.onboarding_step_notification_hint)
         checkOk = granted
         step = 5
+    }
+    val activityRecognitionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
+        if (Build.VERSION.SDK_INT >= 33) {
+            notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            advance(5)
+        }
     }
 
     // 校验消息只在当前步骤有效，换步即清，避免上一步的「服务器可达」串到下一步
@@ -182,13 +191,9 @@ fun OnboardingScreen(vm: AppViewModel, onDone: () -> Unit) {
                     Text(stringResource(R.string.onboarding_step_notification_hint), style = MaterialTheme.typography.bodySmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { advance(5) }) { Text(stringResource(R.string.action_skip)) }
-                        if (Build.VERSION.SDK_INT >= 33) {
-                            Button(onClick = {
-                                notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }) { Text(stringResource(R.string.action_next)) }
-                        } else {
-                            Button(onClick = { advance(5) }) { Text(stringResource(R.string.action_next)) }
-                        }
+                        Button(onClick = {
+                            activityRecognitionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                        }) { Text(stringResource(R.string.action_next)) }
                     }
                 }
                 5 -> {

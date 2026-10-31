@@ -15,8 +15,8 @@
     <string name="onboarding_step_credentials_hint">在服务器上运行 haruka-server device add --kind android，把返回的 id 和 token 填到这里</string>
     <string name="onboarding_step_owner">owner 令牌（可选）</string>
     <string name="onboarding_step_owner_hint">用于在手机上发起全局隐身；跳过则不显示该按钮</string>
-    <string name="onboarding_step_notification">通知权限</string>
-    <string name="onboarding_step_notification_hint">拒绝后服务仍正常运行，仅状态栏通知不展示</string>
+    <string name="onboarding_step_notification">权限</string>
+    <string name="onboarding_step_notification_hint">通知：拒绝后服务仍正常运行，仅状态栏通知不展示。身体活动（步数）：拒绝则状态页不显示今日步数，可随时在系统设置 → 应用 → 遥 → 权限中补授</string>
     <string name="onboarding_step_battery">保活设置</string>
     <string name="onboarding_step_battery_hint">申请忽略电池优化，可随时在设置中重新配置</string>
     <string name="action_check">检查</string>

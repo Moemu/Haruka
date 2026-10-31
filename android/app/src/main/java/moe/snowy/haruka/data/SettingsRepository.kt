@@ -26,6 +26,8 @@ data class Settings(
     val locationMode: String = LOCATION_SERVER,
     /** 家所在区县全名（如「鹿寨县」）；非空且采样点落入该区时 location 事件附 zone:home。 */
     val homeDistrict: String = "",
+    /** 学校所在区县全名；非空且采样点落入该区时 location 事件附 zone:school。 */
+    val schoolDistrict: String = "",
     val pausedUntilMs: Long = 0,
     val lastSyncMs: Long = 0,
     val lastActiveMs: Long = 0,
@@ -59,6 +61,7 @@ class SettingsRepository(private val context: Context) {
         val heartbeatMin = intPreferencesKey("heartbeat_min")
         val locationMode = stringPreferencesKey("location_mode")
         val homeDistrict = stringPreferencesKey("home_district")
+        val schoolDistrict = stringPreferencesKey("school_district")
         val pausedUntil = longPreferencesKey("paused_until_ms")
         val lastSync = longPreferencesKey("last_sync_ms")
         val lastActive = longPreferencesKey("last_active_ms")
@@ -80,6 +83,7 @@ class SettingsRepository(private val context: Context) {
             heartbeatMin = p[K.heartbeatMin] ?: 15,
             locationMode = p[K.locationMode] ?: LOCATION_SERVER,
             homeDistrict = p[K.homeDistrict] ?: "",
+            schoolDistrict = p[K.schoolDistrict] ?: "",
             pausedUntilMs = p[K.pausedUntil] ?: 0,
             lastSyncMs = p[K.lastSync] ?: 0,
             lastActiveMs = p[K.lastActive] ?: 0,
@@ -110,6 +114,10 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setHomeDistrict(name: String) = context.dataStore.edit {
         if (name.isBlank()) it.remove(K.homeDistrict) else it[K.homeDistrict] = name.trim()
+    }
+
+    suspend fun setSchoolDistrict(name: String) = context.dataStore.edit {
+        if (name.isBlank()) it.remove(K.schoolDistrict) else it[K.schoolDistrict] = name.trim()
     }
 
     suspend fun setPausedUntil(ms: Long) = context.dataStore.edit { it[K.pausedUntil] = ms }

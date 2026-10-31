@@ -166,7 +166,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * 家区名保存（c-3）：先在边界包中校验区名存在，防止拼错导致「在家」永不命中；
      * 留空即清除。
      */
-    fun setHomeDistrict(name: String) {
+    fun setHomeDistrict(name: String) = setZoneDistrict(name, ::saveHomeDistrict)
+
+    fun setSchoolDistrict(name: String) = setZoneDistrict(name, ::saveSchoolDistrict)
+
+    private fun setZoneDistrict(name: String, save: suspend (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val trimmed = name.trim()
             if (trimmed.isNotEmpty()) {
@@ -176,9 +180,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
             }
-            c.settings.setHomeDistrict(trimmed)
-            _message.value = if (trimmed.isEmpty()) "已清除家区名" else "家区名已保存：$trimmed"
+            save(trimmed)
         }
+    }
+
+    private suspend fun saveHomeDistrict(trimmed: String) {
+        c.settings.setHomeDistrict(trimmed)
+        _message.value = if (trimmed.isEmpty()) "已清除家区名" else "家区名已保存：$trimmed"
+    }
+
+    private suspend fun saveSchoolDistrict(trimmed: String) {
+        c.settings.setSchoolDistrict(trimmed)
+        _message.value = if (trimmed.isEmpty()) "已清除学区名" else "学区名已保存：$trimmed"
     }
 
     fun applyHeartbeat(min: Int) {

@@ -73,6 +73,11 @@
     <string name="settings_home_district_current">已保存：%1$s</string>
     <string name="settings_home_district_not_set">未设置</string>
     <string name="settings_home_district_hint">在家时状态页显示「在家」而不显示区名。填行政区全名（如：鹿寨县），留空关闭；判定粒度为区县，与家同区县的地点无法区分。</string>
+    <string name="settings_school_district">学校所在区县</string>
+    <string name="settings_school_district_save">保存</string>
+    <string name="settings_school_district_current">已保存：%1$s</string>
+    <string name="settings_school_district_not_set">未设置</string>
+    <string name="settings_school_district_hint">在学校时状态页显示「在学校」。填行政区全名（如：柳北区），留空关闭。</string>
 
     <!-- 手动状态 -->
     <string name="manual_title">现在的心情</string>

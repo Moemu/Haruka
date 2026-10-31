@@ -36,6 +36,8 @@ import moe.snowy.haruka.location.BoundaryLookup
 import moe.snowy.haruka.location.locationData
 import moe.snowy.haruka.protocol.LocationData
 import moe.snowy.haruka.protocol.Wire
+import moe.snowy.haruka.protocol.ZONE_HOME
+import moe.snowy.haruka.protocol.ZONE_SCHOOL
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 
@@ -125,7 +127,7 @@ class LocationService : Service() {
             container.logs.log("location", "未取得定位（provider 无结果）")
             return
         }
-        val data: LocationData? = locationData(container.lookup, fix.latitude, fix.longitude, s.homeDistrict)
+        val data: LocationData? = locationData(container.lookup, fix.latitude, fix.longitude, s.homeDistrict, s.schoolDistrict)
         if (data == null) {
             container.logs.log("location", "坐标未落中国边界内，保持静默")
             return
@@ -141,8 +143,12 @@ class LocationService : Service() {
             ),
         )
         val place = listOfNotNull(data.province, data.city, data.district).joinToString(" ")
-        val atHome = if (data.zone != null) "（在家）" else ""
-        container.logs.log("location", "已采样：$place（${data.precision}）$atHome")
+        val atZone = when (data.zone) {
+            ZONE_HOME -> "（在家）"
+            ZONE_SCHOOL -> "（在学校）"
+            else -> ""
+        }
+        container.logs.log("location", "已采样：$place（${data.precision}）$atZone")
         HeartbeatService.requestFlush()
     }
 

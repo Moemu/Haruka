@@ -227,6 +227,30 @@ fun SettingsCollectPage(vm: AppViewModel, onBack: () -> Unit) {
                     }
                 }
                 Text(stringResource(R.string.settings_home_district_hint), style = MaterialTheme.typography.bodySmall)
+                var schoolInput by remember(settings.schoolDistrict) { mutableStateOf(settings.schoolDistrict) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = schoolInput,
+                        onValueChange = { schoolInput = it },
+                        label = { Text(stringResource(R.string.settings_school_district)) },
+                        supportingText = {
+                            Text(
+                                if (settings.schoolDistrict.isBlank()) stringResource(R.string.settings_school_district_not_set)
+                                else stringResource(R.string.settings_school_district_current, settings.schoolDistrict),
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { vm.setSchoolDistrict(schoolInput) }) {
+                        Text(stringResource(R.string.settings_school_district_save))
+                    }
+                }
+                Text(stringResource(R.string.settings_school_district_hint), style = MaterialTheme.typography.bodySmall)
             }
         }
     }

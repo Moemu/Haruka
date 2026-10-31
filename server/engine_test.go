@@ -1,6 +1,8 @@
 package server
 
 import (
+	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -507,5 +509,41 @@ func TestDeviceStatusAndCategoryVerbs(t *testing.T) {
 	te.now = te.now.Add(21 * time.Minute)
 	if snap = te.snapshot(t); len(snap.Devices) != 0 {
 		t.Fatalf("过期 device 事件应从快照消失: %+v", snap.Devices)
+	}
+}
+
+// zone 决定公开展示（school 与 home 同权），白名单外的 zone 在 ingest 拒收。
+func TestLocationZoneDisplayAndAllowlist(t *testing.T) {
+	te := newTestEnv(t, nil)
+	phone := te.addDevice(t, protocol.KindAndroid, 10*time.Minute)
+	te.emit(t, phone, protocol.TypeLocation, te.now,
+		protocol.LocationData{Source: "gps_coarse", Precision: "district",
+			Country: "中国", Province: "广西", City: "柳州", District: "城中区", Zone: protocol.ZoneSchool})
+	snap := te.snapshot(t)
+	if snap.Location == nil || snap.Location.Display != "在学校" {
+		t.Fatalf("zone=school 应展示「在学校」: %+v", snap.Location)
+	}
+
+	te.emit(t, phone, protocol.TypeLocation, te.now,
+		protocol.LocationData{Source: "gps_coarse", Precision: "district",
+			Country: "中国", Province: "广西", City: "柳州", District: "鹿寨县", Zone: protocol.ZoneHome})
+	if snap = te.snapshot(t); snap.Location == nil || snap.Location.Display != "在家" {
+		t.Fatalf("zone=home 应展示「在家」: %+v", snap.Location)
+	}
+
+	te.seqs[phone.ID]++
+	bad, err := protocol.NewEvent(protocol.TypeLocation, te.seqs[phone.ID], te.now,
+		protocol.LocationData{Source: "gps_coarse", Precision: "district",
+			Country: "中国", Province: "广西", City: "柳州", District: "鹿寨县", Zone: "office"})
+	if err != nil {
+		t.Fatalf("NewEvent: %v", err)
+	}
+	env := protocol.BuildEnvelope(phone.ID, phone.Kind, false, []protocol.Event{bad})
+	body, err := json.Marshal(env)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if _, err := ValidateEnvelope(body); !errors.Is(err, errValidation) {
+		t.Fatalf("白名单外的 zone 应被拒收: %v", err)
 	}
 }

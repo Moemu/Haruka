@@ -103,7 +103,7 @@
         "province": { "type": ["string", "null"], "maxLength": 64 },
         "city": { "type": ["string", "null"], "maxLength": 64 },
         "district": { "type": ["string", "null"], "maxLength": 64 },
-        "zone": { "enum": ["home", null] }
+        "zone": { "enum": ["home", "school", null] }
       }
     },
     "manualData": {

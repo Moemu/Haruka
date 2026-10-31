@@ -5,6 +5,7 @@ import kotlinx.serialization.json.Json
 import moe.snowy.haruka.protocol.LocationData
 import moe.snowy.haruka.protocol.SOURCE_GPS_COARSE
 import moe.snowy.haruka.protocol.ZONE_HOME
+import moe.snowy.haruka.protocol.ZONE_SCHOOL
 
 /**
  * 离线行政区划反解引擎（方案 B 核心，spec §6.3 B）：
@@ -76,10 +77,10 @@ class BoundaryLookup private constructor(
         return best?.boundaryDistanceKm(lat, lon)
     }
 
-    /** 在家判定（c-3）：lat/lon 是否落在指定区名内（区级命中即 home）。 */
-    fun isHomeDistrict(lat: Double, lon: Double, homeDistrict: String): Boolean {
-        if (homeDistrict.isBlank()) return false
-        return adm3.any { it.name == homeDistrict.trim() && it.contains(lat, lon) }
+    /** 地点判定（c-3）：lat/lon 是否落在指定区名内（家/学校共用的区县命中）。 */
+    fun inDistrict(lat: Double, lon: Double, district: String): Boolean {
+        if (district.isBlank()) return false
+        return adm3.any { it.name == district.trim() && it.contains(lat, lon) }
     }
 
     private fun Area.contains(lat: Double, lon: Double): Boolean {
@@ -172,23 +173,29 @@ class BoundaryLookup private constructor(
 
 /**
  * 采样坐标 → 位置事件负载：反解失败返回 null（设备端保持静默，不回退方案 A），
- * 坐标本身不进入返回值。zone 判定在此收敛（c-3 在家；后续公司/学校等地点只扩这里）：
- * 家区名为空或采样点未落入时 zone 留空。判定粒度为区县（边界包 ADM3），
- * 与家同区县的地点无法区分——用户已确认可接受（design.md §6.3 zone 粗粒度口径）。
+ * 坐标本身不进入返回值。zone 判定在此收敛（c-3，家/学校各配一个区县全名）：
+ * 采样点落入家区 → home，落入学区 → school，均未落入留空。判定粒度为区县
+ * （边界包 ADM3），与家同区县的地点无法区分（design.md §6.3 zone 粗粒度口径）。
  */
 fun locationData(
     lookup: BoundaryLookup,
     lat: Double,
     lon: Double,
     homeDistrict: String,
+    schoolDistrict: String = "",
 ): LocationData? {
     val r = lookup.lookup(lat, lon) ?: return null
+    val zone = when {
+        homeDistrict.isNotBlank() && lookup.inDistrict(lat, lon, homeDistrict) -> ZONE_HOME
+        schoolDistrict.isNotBlank() && lookup.inDistrict(lat, lon, schoolDistrict) -> ZONE_SCHOOL
+        else -> null
+    }
     return LocationData(
         source = SOURCE_GPS_COARSE,
         precision = r.precision,
         province = r.province,
         city = r.city,
         district = r.district,
-        zone = if (homeDistrict.isNotBlank() && lookup.isHomeDistrict(lat, lon, homeDistrict)) ZONE_HOME else null,
+        zone = zone,
     )
 }

@@ -36,6 +36,7 @@ const val PRECISION_CITY = "city"
 const val PRECISION_DISTRICT = "district"
 
 const val ZONE_HOME = "home"
+const val ZONE_SCHOOL = "school"
 
 const val SOURCE_IP = "ip"
 const val SOURCE_GPS_COARSE = "gps_coarse"

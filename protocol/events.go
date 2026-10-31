@@ -31,7 +31,8 @@ const (
 	PrecisionCity     = "city"
 	PrecisionDistrict = "district"
 
-	ZoneHome = "home"
+	ZoneHome   = "home"
+	ZoneSchool = "school"
 )
 
 // Envelope 是一次上报的载体，携带同设备的一批事件。

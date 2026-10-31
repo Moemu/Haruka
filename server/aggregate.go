@@ -392,8 +392,11 @@ func activityDisplay(dataJSON string, neutral bool) string {
 }
 
 func locationDisplay(ld protocol.LocationData) string {
-	if ld.Zone == protocol.ZoneHome {
+	switch ld.Zone {
+	case protocol.ZoneHome:
 		return "在家"
+	case protocol.ZoneSchool:
+		return "在学校"
 	}
 	switch ld.Precision {
 	case protocol.PrecisionDistrict:

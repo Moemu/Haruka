@@ -150,5 +150,15 @@ class BoundaryLookupTest {
         val unset = locationData(lookup, 24.483405, 109.740805, "")
         assertNotNull(unset)
         assertNull(unset.zone)
+
+        // 学区命中：家/学校各配一区，采样点落入学区 → zone=school（与家异区县，互斥）
+        val school = locationData(lookup, 24.3190, 109.4155, "鹿寨县", "城中区")
+        assertNotNull(school)
+        assertEquals("school", school.zone)
+
+        // 家区优先不变：落入家区的点即使学区也配置，仍是 home
+        val bothHome = locationData(lookup, 24.483405, 109.740805, "鹿寨县", "城中区")
+        assertNotNull(bothHome)
+        assertEquals("home", bothHome.zone)
     }
 }

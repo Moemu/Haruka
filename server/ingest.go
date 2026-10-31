@@ -174,7 +174,7 @@ func validateEvent(ev *protocol.Event) error {
 		if d.Source != "ip" && d.Source != "gps_coarse" {
 			return fmt.Errorf("%w: location.source 非法", errValidation)
 		}
-		if d.Zone != "" && d.Zone != protocol.ZoneHome {
+		if d.Zone != "" && d.Zone != protocol.ZoneHome && d.Zone != protocol.ZoneSchool {
 			return fmt.Errorf("%w: location.zone 非法", errValidation)
 		}
 		// precision 必须与实际非空层级一致（设计案 5.2 节）。

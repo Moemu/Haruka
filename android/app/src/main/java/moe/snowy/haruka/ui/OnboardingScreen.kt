@@ -60,6 +60,16 @@ fun OnboardingScreen(vm: AppViewModel, onDone: () -> Unit) {
 
     // 第 4 步权限链：先申请身体活动（步数采集需要，MIUI 计步 provider 校验运行时授权），
     // 回调里再走通知申请；拒绝都只降级对应功能，不阻塞向导。
+    // 校验消息只在当前步骤有效，换步即清，避免上一步的「服务器可达」串到下一步
+    fun advance(to: Int) {
+        step = to
+        checkMsg = ""
+        checkOk = false
+        checking = false
+    }
+
+    // 第 4 步权限链：先申请身体活动（步数采集需要，MIUI 计步 provider 校验运行时授权），
+    // 回调里再走通知申请；拒绝都只降级对应功能，不阻塞向导。
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         checkMsg = if (granted) "" else context.getString(R.string.onboarding_step_notification_hint)
         checkOk = granted
@@ -71,14 +81,6 @@ fun OnboardingScreen(vm: AppViewModel, onDone: () -> Unit) {
         } else {
             advance(5)
         }
-    }
-
-    // 校验消息只在当前步骤有效，换步即清，避免上一步的「服务器可达」串到下一步
-    fun advance(to: Int) {
-        step = to
-        checkMsg = ""
-        checkOk = false
-        checking = false
     }
 
     // Scaffold 提供状态栏/手势条内边距（enableEdgeToEdge 下标题不再顶进状态栏）；

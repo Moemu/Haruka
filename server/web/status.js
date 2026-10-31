@@ -80,8 +80,9 @@
   // 圆环本身继续表达电量，环心只作设备身份；未知 kind 回退桌面形。
   var KIND_ICON = {
     desktop: [
-      ["rect", { x: 2.5, y: 7.5, width: 16, height: 9, rx: 2 }],
-      ["path", { d: "M22 11v2" }],
+      ["rect", { x: 2, y: 3, width: 20, height: 14, rx: 2 }],
+      ["path", { d: "M8 21h8" }],
+      ["path", { d: "M12 17v4" }],
     ],
     android: [
       ["rect", { x: 7, y: 2.5, width: 10, height: 19, rx: 2.5 }],

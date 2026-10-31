@@ -208,6 +208,10 @@ body::before {
 }
 .card-asof.stale::after { content: "（有点旧了）"; }
 
+/* 页脚仓库链接：安静地融入同色小字，悬停才现形 */
+.fine a { color: inherit; text-decoration: none; }
+.fine a:hover { text-decoration: underline; }
+
 /* 设备电量环 */
 .device-list {
   margin: auto 0; /* 与 card-body 同法：卡内垂直居中 */

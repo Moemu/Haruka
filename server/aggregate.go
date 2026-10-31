@@ -19,6 +19,7 @@ type PublicStatus struct {
 	Activity    *ActivityV `json:"activity"`
 	Mood        *MoodV     `json:"mood"`
 	Devices     []DeviceV  `json:"devices,omitempty"`
+	Coding      *CodingV   `json:"coding,omitempty"`
 	GeneratedAt string     `json:"generated_at"`
 }
 
@@ -307,6 +308,20 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 		devStatuses = append(devStatuses, sv)
 	}
 	out.Devices = devStatuses
+
+	// coding：WakaTime 轮询结果，server_state 单条。as_of 超过一天说明轮询
+	// 长期失败，今日口径失真（昨天的余数），此时只保留仍然真实的累计。
+	if v, ok, err := stateGetRow(tx, wakatimeStateKey); err != nil {
+		return nil, err
+	} else if ok {
+		var cv CodingV
+		if json.Unmarshal([]byte(v), &cv) == nil && (cv.TotalSeconds > 0 || (cv.TodaySeconds != nil && *cv.TodaySeconds > 0)) {
+			if asOf, err := parseTime(cv.AsOf); err != nil || now.Sub(asOf) > wakatimeFreshCutoff {
+				cv.TodaySeconds = nil
+			}
+			out.Coding = &cv
+		}
+	}
 
 	// manual：全局单条，未清除且未过期。
 	var updatedTS, data sql.NullString

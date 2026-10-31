@@ -27,3 +27,9 @@ aggregation:
 
 # 方案 A 的离线解析库（ip2region.xdb）路径；留空禁用派生。
 location_lookup_db: ""
+
+# WakaTime 数据源：填 api_key 后服务端每 5 分钟拉取一次官方 API，
+# 状态页展示今日与累计编码时长；留空即停用。
+# key 只保存在本配置文件里，不会出现在公开接口。
+# wakatime:
+#   api_key: "waka_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

@@ -104,6 +104,7 @@ func cliServe(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go engine.RunRetention(ctx)
+	go engine.RunWakaTime(ctx)
 
 	srv := &http.Server{
 		Addr:              rt.Listen,

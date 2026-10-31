@@ -35,6 +35,11 @@ type Config struct {
 	// LocationLookupDB 是方案 A 的离线解析库（ip2region.xdb）路径；
 	// 空表示禁用派生（设备未上报位置时公开快照就没有位置字段）。
 	LocationLookupDB string `yaml:"location_lookup_db"`
+
+	// WakaTime 数据源：api_key 为空即停用（见 server/wakatime.go）。
+	WakaTime struct {
+		APIKey string `yaml:"api_key"`
+	} `yaml:"wakatime"`
 }
 
 // Runtime 是补全默认值后的可运行配置。

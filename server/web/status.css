@@ -55,7 +55,7 @@ body::before {
 .wrap {
   max-width: 880px;
   margin: 0 auto;
-  padding: 24px 24px 56px;
+  padding: 24px 24px 32px;
 }
 
 /* 页头 */
@@ -81,8 +81,8 @@ body::before {
   object-fit: cover;
 }
 
-/* Hero：大字状态词 + 观测 meta，纯排版 */
-.hero { padding: 56px 0 48px; }
+/* Hero：大字状态词 + 观测 meta，纯排版。纵向收紧保证桌面端整页免滚动 */
+.hero { padding: 36px 0 32px; }
 .hero-label {
   margin: 0 0 10px;
   color: var(--muted);

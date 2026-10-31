@@ -20,6 +20,9 @@
     locationAsof: $("location-asof"),
     moodText: $("mood-text"),
     moodAsof: $("mood-asof"),
+    cardCoding: $("card-coding"),
+    codingText: $("coding-text"),
+    codingAsof: $("coding-asof"),
     cardDevices: $("card-devices"),
     devicesList: $("devices-list"),
     footerSync: $("footer-sync"),
@@ -49,6 +52,16 @@
     var d = new Date(iso);
     if (isNaN(d.getTime())) { return ""; }
     return d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+
+  // 时长：分钟起步；累计到小时后取整并用千分位。
+  function dur(sec) {
+    var m = Math.round(sec / 60);
+    var h = Math.floor(m / 60);
+    return h >= 1 ? h + " 小时 " + (m % 60) + " 分" : m + " 分钟";
+  }
+  function durTotal(sec) {
+    return sec < 3600 ? dur(sec) : Math.round(sec / 3600).toLocaleString("zh-CN") + " 小时";
   }
 
   // presence 词即文案：大字直接展示，meta 负责时间语境。
@@ -191,6 +204,23 @@
       setField(els.moodText, els.moodAsof, moodText || "一切如常", snap.mood.until ? "至 " + clock(snap.mood.until) + " 有效" : "", false);
     } else {
       setField(els.moodText, els.moodAsof, "一切如常", "", false);
+    }
+
+    // 编码时长：WakaTime 服务端轮询值（编辑器活动口径）。today_seconds
+    // 缺席表示数据过旧（服务端守卫），只展示仍然真实的累计；为 0 表示
+    // 当天确实还没写。
+    if (snap.coding && (snap.coding.total_seconds > 0 || snap.coding.today_seconds > 0)) {
+      var cv = snap.coding;
+      if (cv.today_seconds != null) {
+        els.codingText.textContent = cv.today_seconds > 0 ? dur(cv.today_seconds) : "今天还没写代码";
+        els.codingAsof.textContent = cv.total_seconds > 0 ? "累计 " + durTotal(cv.total_seconds) : "";
+      } else {
+        els.codingText.textContent = "累计 " + durTotal(cv.total_seconds);
+        els.codingAsof.textContent = "";
+      }
+      els.cardCoding.hidden = false;
+    } else {
+      els.cardCoding.hidden = true;
     }
 
     // 设备状态：只列出上报了电量数据的在线设备；全部缺席时整卡隐藏。

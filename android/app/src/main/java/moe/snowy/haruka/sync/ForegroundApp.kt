@@ -18,8 +18,9 @@ import moe.snowy.haruka.protocol.DeviceData
  *   无「使用情况访问权限」返回 null），包名经内置映射表或 PackageManager 显示名转展示名。
  * - 电量：系统粘性广播 ACTION_BATTERY_CHANGED，无需任何权限。
  * - 步数：MIUI 计步 provider（content://com.miui.providers.steps/item，当日累计，
- *   5 分钟粒度）；READ_STEPS 为 normal 级装即授，实测无需 ACTIVITY_RECOGNITION。
- *   非 MIUI ROM / provider 缺席 / 任何异常一律 null（字段省略）。
+ *   5 分钟粒度）。provider 校验调用方对 ACTIVITY_RECOGNITION 的声明（manifest 必须声明，
+ *   本机实测未运行时授权亦可读取）；READ_STEPS 为 normal 级装即授。
+ *   非 MIUI ROM / provider 缺席 / 任何异常一律 null（字段省略，首错写诊断日志）。
  */
 object ForegroundApp {
 

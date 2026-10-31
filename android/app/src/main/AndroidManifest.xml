@@ -15,7 +15,10 @@
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
-    <!-- 步数采样：MIUI 计步 provider，normal 级装即授；非 MIUI ROM 无此权限亦无碍 -->
+    <!-- 步数采样：MIUI 计步 provider 校验调用方的 ACTIVITY_RECOGNITION 声明（官方文档要求动态
+         申请；2026-10-31 实测本机声明即可读取，未运行时授权亦可，诊断日志兜底记录真实失败原因）。
+         v0.1.3/0.1.4 曾因该声明只存在于调试清单而在 release 上被 SecurityException 拒收 -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="miui.permission.READ_STEPS" />
 
     <application

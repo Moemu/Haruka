@@ -137,6 +137,42 @@ func (e *Engine) DeviceRevoke(id string) error {
 	return err
 }
 
+// DeviceEdit 更新设备的可变字段（name / interval / location_policy）：
+// 零值字段保持不变，全部为零值报错；已吊销设备不可编辑。
+func (e *Engine) DeviceEdit(id, name string, interval time.Duration, policy string) (Device, error) {
+	if name == "" && interval <= 0 && policy == "" {
+		return Device{}, fmt.Errorf("没有要修改的字段：--name、--interval、--location-policy 至少给一个")
+	}
+	d, err := e.DeviceByID(id)
+	if err != nil {
+		return Device{}, err
+	}
+	if d.Revoked {
+		return Device{}, fmt.Errorf("设备已吊销，不可编辑: %s", id)
+	}
+	if name != "" {
+		d.Name = name
+	}
+	if interval > 0 {
+		d.Interval = interval
+	}
+	if policy != "" {
+		switch policy {
+		case "server", "local", "off":
+			d.LocationPolicy = policy
+		default:
+			return Device{}, fmt.Errorf("location_policy 只能是 server、local 或 off")
+		}
+	}
+	if _, err := e.db.Exec(
+		`UPDATE devices SET name = ?, heartbeat_interval_s = ?, location_policy = ? WHERE id = ? AND revoked_at IS NULL`,
+		d.Name, int64(d.Interval/time.Second), d.LocationPolicy, id,
+	); err != nil {
+		return Device{}, err
+	}
+	return d, nil
+}
+
 // --- 保留策略 ---
 
 // RunRetention 周期清理过期原始事件；ctx 结束返回。

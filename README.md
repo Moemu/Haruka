@@ -151,6 +151,7 @@ $agentConfig = (Resolve-Path ./haruka-agent.yml).Path
 
 ```sh
 ./bin/haruka-server device list -c haruka-server.yml
+./bin/haruka-server device edit -c haruka-server.yml --id <设备ID> --name <新名称>
 ./bin/haruka-server device revoke -c haruka-server.yml --id <设备ID>
 ./bin/haruka-server backup -c haruka-server.yml -o backup.db
 ./bin/haruka-server owner-token -c haruka-server.yml --generate

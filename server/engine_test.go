@@ -448,6 +448,41 @@ func TestAssertion8HideExpirySelfHealAndKeepMode(t *testing.T) {
 	}
 }
 
+// DeviceEdit：指定字段更新、其余保持、空编辑与未知设备报错、已吊销设备不可编辑。
+func TestDeviceEdit(t *testing.T) {
+	te := newTestEnv(t, nil)
+	d := te.addDevice(t, protocol.KindDesktop, time.Minute)
+
+	got, err := te.e.DeviceEdit(d.ID, "yukigakure", 5*time.Minute, "local")
+	if err != nil {
+		t.Fatalf("DeviceEdit: %v", err)
+	}
+	if got.Name != "yukigakure" || got.Interval != 5*time.Minute || got.LocationPolicy != "local" || got.Kind != "desktop" {
+		t.Fatalf("字段未按预期更新: %+v", got)
+	}
+	again, err := te.e.DeviceByID(d.ID)
+	if err != nil || again.Name != "yukigakure" || again.Interval != 5*time.Minute {
+		t.Fatalf("未落库或读回不一致: %+v err=%v", again, err)
+	}
+
+	if _, err := te.e.DeviceEdit(d.ID, "", 0, ""); err == nil {
+		t.Fatal("空编辑应报错")
+	}
+	if _, err := te.e.DeviceEdit("d_none0000", "x", 0, ""); err == nil {
+		t.Fatal("未知设备应报错")
+	}
+	if _, err := te.e.DeviceEdit(d.ID, "", 0, "bogus"); err == nil {
+		t.Fatal("非法 policy 应报错")
+	}
+
+	if err := te.e.DeviceRevoke(d.ID); err != nil {
+		t.Fatalf("DeviceRevoke: %v", err)
+	}
+	if _, err := te.e.DeviceEdit(d.ID, "x", 0, ""); err == nil {
+		t.Fatal("已吊销设备应不可编辑")
+	}
+}
+
 // 设备电量聚合与分类动词：device 事件只在设备在线且未过期时出现在公开快照。
 func TestDeviceStatusAndCategoryVerbs(t *testing.T) {
 	te := newTestEnv(t, nil)

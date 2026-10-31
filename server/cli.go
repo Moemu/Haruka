@@ -21,6 +21,7 @@ const cliUsage = `haruka-server — Haruka 服务端
   haruka-server serve          [-c 配置]
   haruka-server device add     [-c 配置] --name 名称 --kind desktop|android [--interval 10m] [--location-policy server|local|off]
   haruka-server device list    [-c 配置]
+  haruka-server device edit    [-c 配置] --id 设备ID [--name 名称] [--interval 10m] [--location-policy server|local|off]
   haruka-server device revoke  [-c 配置] --id 设备ID
   haruka-server owner-token    [-c 配置] [--generate] [--rotate]
   haruka-server hide           [-c 配置] [时长，缺省不限期]
@@ -132,7 +133,7 @@ func cliServe(args []string) error {
 
 func cliDevice(args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("用法: haruka-server device add|list|revoke ...")
+		return fmt.Errorf("用法: haruka-server device add|list|edit|revoke ...")
 	}
 	sub, rest := args[0], args[1:]
 	switch sub {
@@ -176,6 +177,27 @@ func cliDevice(args []string) error {
 			}
 			fmt.Printf("%s  %-12s %-8s interval=%-6s policy=%-6s %s\n", d.ID, d.Name, d.Kind, d.Interval, d.LocationPolicy, state)
 		}
+	case "edit":
+		fs, cfg := configFlag(rest)
+		id := fs.String("id", "", "设备 ID")
+		name := fs.String("name", "", "新设备名称（留空不变）")
+		interval := fs.Duration("interval", 0, "新心跳间隔（留空不变）")
+		policy := fs.String("location-policy", "", "server | local | off（留空不变）")
+		fs.Parse(rest)
+		if *id == "" {
+			return fmt.Errorf("--id 不能为空")
+		}
+		engine, _, err := openEngine(*cfg)
+		if err != nil {
+			return err
+		}
+		defer engine.db.Close()
+		d, err := engine.DeviceEdit(*id, *name, *interval, *policy)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("设备已更新:\n  id:     %s\n  name:   %s\n  kind:   %s\n  interval: %s\n  location_policy: %s\n",
+			d.ID, d.Name, d.Kind, d.Interval, d.LocationPolicy)
 	case "revoke":
 		fs, cfg := configFlag(rest)
 		id := fs.String("id", "", "设备 ID")

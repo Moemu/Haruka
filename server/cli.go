@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -77,6 +78,49 @@ func openEngine(cfgPath string) (*Engine, *Runtime, error) {
 	return NewEngine(&rt, db, nil, log), &rt, nil
 }
 
+// logRotateMax 是单个日志文件上限；轮转后只保留 1 个旧文件，磁盘占用上限 = 2 × max。
+const logRotateMax = 10 << 20
+
+// rotateWriter 是按大小轮转的日志文件。写满 max 时当前文件改名为 path.1
+// （旧轮转直接覆盖）再续写。slog 的 TextHandler 串行化写调用，互斥锁是双保险。
+type rotateWriter struct {
+	mu   sync.Mutex
+	path string
+	max  int64
+	f    *os.File
+	size int64
+}
+
+func openRotateWriter(path string, max int64) (*rotateWriter, error) {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	info, err := f.Stat()
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	return &rotateWriter{path: path, max: max, f: f, size: info.Size()}, nil
+}
+
+func (w *rotateWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.size+int64(len(p)) > w.max {
+		w.f.Close()
+		os.Rename(w.path, w.path+".1") // 改名失败不致命，当前文件照常续写
+		f, err := os.OpenFile(w.path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+		if err != nil {
+			return 0, err
+		}
+		w.f, w.size = f, 0
+	}
+	n, err := w.f.Write(p)
+	w.size += int64(n)
+	return n, err
+}
+
 func cliServe(args []string) error {
 	fs, cfg := configFlag(args)
 	fs.Parse(args)
@@ -91,6 +135,13 @@ func cliServe(args []string) error {
 	defer db.Close()
 
 	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	if rt.Cfg.LogFile != "" {
+		w, err := openRotateWriter(rt.Cfg.LogFile, logRotateMax)
+		if err != nil {
+			return fmt.Errorf("打开日志文件 %s: %w", rt.Cfg.LogFile, err)
+		}
+		log = slog.New(slog.NewTextHandler(w, nil))
+	}
 	var resolver LocationResolver
 	if rt.Cfg.LocationLookupDB != "" {
 		s, err := geo.NewSearcher(rt.Cfg.LocationLookupDB)

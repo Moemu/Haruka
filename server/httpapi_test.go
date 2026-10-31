@@ -223,6 +223,79 @@ func TestControlRequiresOwnerToken(t *testing.T) {
 	}
 }
 
+func TestRateLimitPerIP(t *testing.T) {
+	te := newTestEnv(t, func(c *Config) {
+		c.RateLimit.RPM = 60 // 1 次/秒
+		c.RateLimit.Burst = 2
+	})
+	h := te.e.Handler()
+	hit := func(path string) int {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		req.RemoteAddr = "203.0.113.7:1000"
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	// burst=2：前两个放行，第三个 429 且带 Retry-After。
+	for i := 0; i < 2; i++ {
+		if code := hit("/v1/whoami-ip"); code != 200 {
+			t.Fatalf("burst 内第 %d 个请求应 200，得到 %d", i+1, code)
+		}
+	}
+	req := httptest.NewRequest(http.MethodGet, "/v1/whoami-ip", nil)
+	req.RemoteAddr = "203.0.113.7:1000"
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("超限应 429，得到 %d", rec.Code)
+	}
+	if rec.Header().Get("Retry-After") == "" {
+		t.Fatal("429 应带 Retry-After")
+	}
+	// healthz 豁免限流。
+	if code := hit("/healthz"); code != 200 {
+		t.Fatalf("healthz 应豁免限流，得到 %d", code)
+	}
+	// 其他 IP 不受同一桶影响。
+	req2 := httptest.NewRequest(http.MethodGet, "/v1/whoami-ip", nil)
+	req2.RemoteAddr = "198.51.100.9:1000"
+	rec2 := httptest.NewRecorder()
+	h.ServeHTTP(rec2, req2)
+	if rec2.Code != 200 {
+		t.Fatalf("另一 IP 应独立限流，得到 %d", rec2.Code)
+	}
+}
+
+func TestRateLimitDisabled(t *testing.T) {
+	te := newTestEnv(t, func(c *Config) { c.RateLimit.RPM = 0 })
+	h := te.e.Handler()
+	for i := 0; i < 10; i++ {
+		req := httptest.NewRequest(http.MethodGet, "/v1/whoami-ip", nil)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != 200 {
+			t.Fatalf("rpm=0 应不限流，第 %d 个请求得到 %d", i+1, rec.Code)
+		}
+	}
+}
+
+func TestRateLimitConfigValidation(t *testing.T) {
+	cfg := defaultConfig()
+	cfg.RateLimit.RPM = -1
+	if _, err := ValidateConfig(cfg); err == nil {
+		t.Fatal("rate_limit.rpm 为负应报错")
+	}
+	cfg = defaultConfig()
+	cfg.RateLimit.Burst = 0
+	rt, err := ValidateConfig(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rt.RateBurst != 60 {
+		t.Fatalf("burst 缺省应补 60，得到 %d", rt.RateBurst)
+	}
+}
+
 func TestClientIPTrustedProxy(t *testing.T) {
 	trusted := []*net.IPNet{parseTrustedProxy("127.0.0.1")}
 

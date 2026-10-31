@@ -16,6 +16,14 @@ type Config struct {
 	TrustedProxies []string `yaml:"trusted_proxies"`
 	CORSOrigins    []string `yaml:"cors_origins"`
 
+	RateLimit struct {
+		RPM   int `yaml:"rpm"`
+		Burst int `yaml:"burst"`
+	} `yaml:"rate_limit"`
+
+	// LogFile 为空输出 stdout（Docker 推荐）；填写后按 10MB 轮转、保留 1 个旧文件。
+	LogFile string `yaml:"log_file"`
+
 	FreshnessLag    string `yaml:"freshness_lag"`
 	FutureTolerance string `yaml:"future_tolerance"`
 	ClockSkewWarn   string `yaml:"clock_skew_warn"`
@@ -56,6 +64,9 @@ type Runtime struct {
 	HeartbeatDefault time.Duration
 	EventsRetention  time.Duration
 
+	RateRPM   int
+	RateBurst int
+
 	LocationPriority []string
 }
 
@@ -64,6 +75,8 @@ func defaultConfig() Config {
 	c.Listen = "127.0.0.1:8080"
 	c.DBPath = "haruka.db"
 	c.TrustedProxies = nil
+	c.RateLimit.RPM = 120
+	c.RateLimit.Burst = 60
 	c.FreshnessLag = "10m"
 	c.FutureTolerance = "5m"
 	c.ClockSkewWarn = "24h"
@@ -114,6 +127,14 @@ func ValidateConfig(cfg Config) (Runtime, error) {
 	case "discard", "keep":
 	default:
 		return rt, fmt.Errorf("on_hide 只能是 discard 或 keep")
+	}
+	if cfg.RateLimit.RPM < 0 {
+		return rt, fmt.Errorf("rate_limit.rpm 不能为负")
+	}
+	rt.RateRPM = cfg.RateLimit.RPM
+	rt.RateBurst = cfg.RateLimit.Burst
+	if rt.RateRPM > 0 && rt.RateBurst <= 0 {
+		rt.RateBurst = 60
 	}
 	rt.Listen = cfg.Listen
 	rt.DBPath = cfg.DBPath

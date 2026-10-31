@@ -8,6 +8,12 @@ trusted_proxies: []           # 使用反向代理时，显式填写代理的 IP
 # 公开快照的 CORS 白名单（博客域名）
 cors_origins: []              # 跨域读取公开 API 时填写博客域名
 
+# 每 IP 令牌桶限流：默认 120 次/分钟、突发 60；rpm 设 0 关闭。
+# trusted_proxies 未配置时所有请求视为同一 IP，限流退化为全局。
+rate_limit:
+  rpm: 120                    # 状态页 30 秒轮询一次，日常用量远低于此
+  burst: 60
+
 # 超过新鲜度窗口的观测只入历史，不刷新公开状态
 freshness_lag: 10m            # 观测时间距接收时间的最大容差，超出只入库
 future_tolerance: 5m          # 允许的小幅时钟超前
@@ -33,3 +39,7 @@ location_lookup_db: ""
 # key 只保存在本配置文件里，不会出现在公开接口。
 # wakatime:
 #   api_key: "waka_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# 日志输出 stdout（Docker 推荐，配合 --log-opt 轮转）；
+# 填写路径后按 10MB 轮转、保留 1 个旧文件。
+log_file: ""

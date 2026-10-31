@@ -186,7 +186,7 @@ Haruka 的 Android 端按「不触发系统管控」设计：不持唤醒锁、�
 
 ## 部署与配置⚙️
 
-服务端与采集端可以运行在不同机器。此时将采集端的 `server` 改为自己的 HTTPS 地址。服务端监听回环地址，由反向代理终止 TLS；请在代理层配置限流和连接数限制。应用目前没有内置限流。
+服务端与采集端可以运行在不同机器。此时将采集端的 `server` 改为自己的 HTTPS 地址。服务端监听回环地址，由反向代理终止 TLS；请在代理层配置连接数限制。应用内置每 IP 令牌桶限流，默认 120 次/分钟、突发 60（`rate_limit` 可调，`rpm` 设 0 关闭），与代理层限流叠加生效。
 
 容器部署：仓库自带多阶段 Dockerfile，状态页经 go:embed 打进二进制，镜像内无前端构建。推 `v*` 标签时 CI 会把服务端镜像发布到 GHCR，可直接拉取：`docker pull ghcr.io/moemu/haruka:latest`。注意容器内监听地址需改为 `0.0.0.0:8080`：
 
@@ -194,11 +194,12 @@ Haruka 的 Android 端按「不触发系统管控」设计：不持唤醒锁、�
 docker build -t haruka-server .
 docker run -d --name haruka-server \
   -p 127.0.0.1:8080:8080 \
+  --log-opt max-size=10m --log-opt max-file=3 \
   -v "$PWD/haruka-server.yml:/haruka-server.yml:ro" \
   haruka-server serve -c /haruka-server.yml
 ```
 
-上面的 `-p` 适合宿主机上的反向代理；Caddy 等以容器运行时，改为让两端加入同一 Docker 网络并去掉 `-p`。
+上面的 `-p` 适合宿主机上的反向代理；Caddy 等以容器运行时，改为让两端加入同一 Docker 网络并去掉 `-p`。日志默认输出 stdout，`--log-opt` 让 Docker 轮转容器日志；裸机部署可在配置里设置 `log_file`，按 10MB 轮转并保留 1 个旧文件。
 
 `trusted_proxies` 只填写实际代理地址；`cors_origins` 只影响浏览器跨域读取，公开 API 本身没有访问鉴权。内置页面使用同源 API，无需 CORS 设置。
 
@@ -231,7 +232,7 @@ docker run -d --name haruka-server \
 
 ## 后续计划🌱
 
-- [ ] 内置限流与服务端日志轮转。
+- [x] 内置限流与服务端日志轮转。
 - [ ] 定位手动覆盖；IP 定位在真实出口 IP 场景下的验证。
 
 ## 参与开发🤝

@@ -11,7 +11,10 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 // 状态页静态资源随二进制分发（设计案 §10：独立页由 GET /status 提供）。
@@ -55,7 +58,84 @@ func (e *Engine) Handler() http.Handler {
 	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "icon.webp") })
 	mux.HandleFunc("GET /bg-desktop.webp", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "bg-desktop.webp") })
 	mux.HandleFunc("GET /bg-mobile.webp", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "bg-mobile.webp") })
+	if e.rt.RateRPM > 0 {
+		return e.limit(mux)
+	}
 	return mux
+}
+
+// rateLimiter 按 ClientIP 做令牌桶限流。桶表有硬上限，溢出后并入共享桶，
+// 防伪造来源 IP 撑爆内存。单阈值不分路由（ponytail: 公开/认证接口分阈值，被滥用时再加）。
+type rateLimiter struct {
+	mu      sync.Mutex
+	buckets map[string]*rateBucket
+	shared  *rate.Limiter
+	limit   rate.Limit
+	burst   int
+}
+
+type rateBucket struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
+const (
+	rateBucketCap      = 8192
+	rateBucketIdleTime = time.Hour
+)
+
+func newRateLimiter(rpm, burst int) *rateLimiter {
+	perReq := rate.Every(time.Minute / time.Duration(rpm)) // rpm 次/分钟 = 每 rpm 分之一分钟一次
+	l := &rateLimiter{
+		buckets: make(map[string]*rateBucket),
+		shared:  rate.NewLimiter(perReq, burst),
+		limit:   perReq,
+		burst:   burst,
+	}
+	go l.cleanup()
+	return l
+}
+
+func (l *rateLimiter) cleanup() {
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		l.mu.Lock()
+		for key, b := range l.buckets {
+			if time.Since(b.lastSeen) > rateBucketIdleTime {
+				delete(l.buckets, key)
+			}
+		}
+		l.mu.Unlock()
+	}
+}
+
+func (l *rateLimiter) allow(key string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	b, ok := l.buckets[key]
+	if !ok {
+		if len(l.buckets) >= rateBucketCap {
+			return l.shared.Allow()
+		}
+		b = &rateBucket{limiter: rate.NewLimiter(l.limit, l.burst)}
+		l.buckets[key] = b
+	}
+	b.lastSeen = time.Now()
+	return b.limiter.Allow()
+}
+
+// limit 用每 IP 令牌桶包住全部路由；healthz 豁免，监控探针不受限。
+func (e *Engine) limit(next http.Handler) http.Handler {
+	l := newRateLimiter(e.rt.RateRPM, e.rt.RateBurst)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/healthz" || l.allow(ClientIP(r, e.trustedNets()).String()) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		w.Header().Set("Retry-After", "1")
+		httpError(w, http.StatusTooManyRequests, "请求过于频繁")
+	})
 }
 
 // serveWeb 输出内置状态页资源：no-cache + ETag 保证升级后页面立即生效；

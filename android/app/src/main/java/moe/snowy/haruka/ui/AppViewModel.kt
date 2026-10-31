@@ -25,6 +25,7 @@ import moe.snowy.haruka.data.Settings
 import moe.snowy.haruka.data.LOCATION_LOCAL
 import moe.snowy.haruka.net.HttpResult
 import moe.snowy.haruka.net.PublicSnapshot
+import moe.snowy.haruka.net.normalizeBaseUrl
 import moe.snowy.haruka.protocol.ManualData
 import moe.snowy.haruka.protocol.TYPE_MANUAL
 import moe.snowy.haruka.protocol.Wire
@@ -275,11 +276,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun checkServer(url: String, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            val base = url.trim().trimEnd('/')
-            if (base.isBlank()) {
+            if (url.isBlank()) {
                 onResult(false, "请输入服务器地址")
                 return@launch
             }
+            val base = normalizeBaseUrl(url)
             when (val r = c.api.healthz(base)) {
                 is HttpResult.Ok -> onResult(true, "服务器可达")
                 is HttpResult.Http -> onResult(false, "HTTP ${r.code}")
@@ -290,7 +291,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun verifyCredentials(serverUrl: String, deviceId: String, token: String, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            val base = serverUrl.trim().trimEnd('/')
+            val base = normalizeBaseUrl(serverUrl)
             if (deviceId.isBlank() || token.isBlank()) {
                 onResult(false, "请填写设备 ID 与令牌")
                 return@launch
@@ -310,7 +311,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun completeOnboarding(serverUrl: String, deviceId: String, token: String, ownerToken: String) {
         viewModelScope.launch {
-            c.settings.saveCredentials(serverUrl, deviceId, token, ownerToken)
+            c.settings.saveCredentials(normalizeBaseUrl(serverUrl), deviceId, token, ownerToken)
             c.settings.setServiceEnabled(true)
             if (ServiceRuntime.state.value.running) {
                 // 服务已随开机/兜底路径启动过：唤醒立即打第一拍。

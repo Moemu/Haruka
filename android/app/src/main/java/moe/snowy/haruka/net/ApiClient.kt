@@ -18,6 +18,15 @@ sealed class HttpResult {
     data class Network(val message: String) : HttpResult()
 }
 
+/**
+ * 补全服务器地址的 scheme：无 `://` 前缀按 https 处理（公网端点均为 HTTPS；
+ * 本地调试请显式写 http://）。向导输入与服务端保存统一走这里。
+ */
+fun normalizeBaseUrl(raw: String): String {
+    val s = raw.trim().trimEnd('/')
+    return if (s.contains("://")) s else "https://$s"
+}
+
 @Serializable
 data class PublicSnapshot(
     val visibility: String = "visible",
@@ -60,6 +69,9 @@ class ApiClient {
         }
     } catch (e: IOException) {
         HttpResult.Network(e.message ?: "network error")
+    } catch (e: IllegalArgumentException) {
+        // OkHttp url() 对病态地址（缺 scheme、裸冒号等）抛 IAE：降级为网络错误，不让协程带崩进程
+        HttpResult.Network(e.message ?: "invalid url")
     }
 
     fun ingest(baseUrl: String, token: String, envelopeJson: String): HttpResult =

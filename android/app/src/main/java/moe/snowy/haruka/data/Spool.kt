@@ -25,7 +25,6 @@ class Spool(context: Context) : SQLiteOpenHelper(context, "haruka.db", null, 1) 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE events(id TEXT PRIMARY KEY, seq INTEGER NOT NULL, ts TEXT NOT NULL, type TEXT NOT NULL, data TEXT NOT NULL, created_ms INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
-        db.execSQL("CREATE TABLE sync_log(n INTEGER PRIMARY KEY AUTOINCREMENT, at_ms INTEGER NOT NULL, kind TEXT NOT NULL, detail TEXT NOT NULL)")
         db.execSQL("INSERT OR IGNORE INTO meta(key, value) VALUES('seq', '0')")
     }
 

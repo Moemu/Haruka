@@ -38,16 +38,11 @@ func NewSearcher(dbPath string) (*Searcher, error) {
 	return &Searcher{inner: inner}, nil
 }
 
-// Region 返回 xdb 的原始区域串（国家|区域|省份|城市|ISP），供诊断与测试。
-func (s *Searcher) Region(ipStr string) (string, error) {
-	return s.inner.Search(ipStr)
-}
-
 // Resolve 把 IP 解析为脱敏的行政区划字符串。返回 false 表示
 // 保留 IP（回环/内网/保留段）或解析失败——调用方应跳过而不是猜测。
 func (s *Searcher) Resolve(ipStr string) (protocol.LocationData, bool) {
 	ip := net.ParseIP(strings.TrimSpace(ipStr))
-	if ip == nil || isReserved(ip) {
+	if IsReserved(ip) {
 		return protocol.LocationData{}, false
 	}
 	region, err := s.inner.Search(ipStr)
@@ -93,5 +88,3 @@ func IsReserved(ip net.IP) bool {
 		ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
 		ip.IsMulticast()
 }
-
-func isReserved(ip net.IP) bool { return IsReserved(ip) }

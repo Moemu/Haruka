@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -117,15 +116,6 @@ func randHex(n int) string {
 
 // --- server_state 键值访问 ---
 
-func stateGet(tx *sql.Tx, key string) (string, bool, error) {
-	var v string
-	err := tx.QueryRow(`SELECT value FROM server_state WHERE key = ?`, key).Scan(&v)
-	if err == sql.ErrNoRows {
-		return "", false, nil
-	}
-	return v, err == nil, err
-}
-
 func stateSet(tx stateQ, key, value string) error {
 	_, err := tx.Exec(`INSERT INTO server_state (key, value) VALUES (?, ?)
 		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, value)
@@ -148,5 +138,3 @@ func parseDur(s, field string) (time.Duration, error) {
 	}
 	return d, nil
 }
-
-func readFile(path string) ([]byte, error) { return os.ReadFile(path) }

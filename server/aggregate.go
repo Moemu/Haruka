@@ -176,9 +176,7 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 		case pd.State == protocol.StateActive:
 			state = "active"
 		case pd.State == protocol.StateAway && state != "active":
-			if state != "active" {
-				state = "away"
-			}
+			state = "away"
 		}
 	}
 	if !anyOnline {

@@ -11,6 +11,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"haruka/internal/geo"
 )
 
 const cliUsage = `haruka-server — Haruka 服务端
@@ -90,11 +92,11 @@ func cliServe(args []string) error {
 	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	var resolver LocationResolver
 	if rt.Cfg.LocationLookupDB != "" {
-		r, err := NewXDBResolver(rt.Cfg.LocationLookupDB)
+		s, err := geo.NewSearcher(rt.Cfg.LocationLookupDB)
 		if err != nil {
 			return fmt.Errorf("方案 A 位置解析库加载失败: %w", err)
 		}
-		resolver = r
+		resolver = s // geo.Searcher.Resolve 直接满足 LocationResolver
 		log.Info("方案 A 位置解析已启用", "db", rt.Cfg.LocationLookupDB)
 	}
 	engine := NewEngine(&rt, db, resolver, log)

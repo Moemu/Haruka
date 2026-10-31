@@ -14,8 +14,7 @@ import (
 // Spool 是断线续传的落盘缓冲：只存观测事件与 manual 操作，
 // heartbeat 永不入 spool（见设计案 5.3、8.3 节）。
 type Spool struct {
-	db   *sql.DB
-	path string
+	db *sql.DB
 }
 
 func OpenSpool(path string) (*Spool, error) {
@@ -37,7 +36,7 @@ func OpenSpool(path string) (*Spool, error) {
 		db.Close()
 		return nil, err
 	}
-	return &Spool{db: db, path: path}, nil
+	return &Spool{db: db}, nil
 }
 
 func (s *Spool) Add(events []protocol.Event) error {

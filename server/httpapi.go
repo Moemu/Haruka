@@ -185,13 +185,8 @@ func (e *Engine) handleIngest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Engine) authDevice(w http.ResponseWriter, r *http.Request) (Device, bool) {
-	token := bearerToken(r)
-	if token == "" {
-		httpError(w, http.StatusUnauthorized, "缺少设备令牌")
-		return Device{}, false
-	}
-	device, err := e.DeviceByToken(token)
-	if err != nil {
+	device, ok := e.authDeviceQuiet(r)
+	if !ok {
 		httpError(w, http.StatusUnauthorized, "令牌无效")
 		return Device{}, false
 	}

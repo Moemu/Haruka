@@ -1,19 +1,15 @@
 package moe.snowy.haruka.sync
 
-import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-import android.os.PowerManager
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import moe.snowy.haruka.data.SettingsRepository
-import moe.snowy.haruka.protocol.PresenceData
-import moe.snowy.haruka.protocol.presenceSample
 
 /**
  * 亮屏启发式的屏幕状态源：服务运行期间监听亮屏/解锁/息屏，把最近活跃时刻
@@ -57,17 +53,6 @@ class ScreenTracker(
         } catch (e: IllegalArgumentException) {
             // 未注册或已注销
         }
-    }
-
-    suspend fun sample(): PresenceData {
-        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        val km = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-        return presenceSample(
-            interactive = pm.isInteractive,
-            keyguardLocked = km.isKeyguardLocked,
-            nowMs = System.currentTimeMillis(),
-            lastActiveMs = lastActiveCache,
-        )
     }
 
     companion object {

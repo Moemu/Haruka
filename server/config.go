@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -69,7 +70,7 @@ func defaultConfig() Config {
 }
 
 func LoadConfig(path string) (Runtime, error) {
-	raw, err := readFile(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return Runtime{}, fmt.Errorf("读取配置 %s: %w", path, err)
 	}

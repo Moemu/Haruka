@@ -111,11 +111,9 @@ func validateEvent(ev *protocol.Event) error {
 			return fmt.Errorf("%w: 事件 id 必须小写十六进制", errValidation)
 		}
 	}
-	ts, err := parseTime(ev.TS)
-	if err != nil {
+	if _, err := parseTime(ev.TS); err != nil {
 		return fmt.Errorf("%w: ts 非 RFC3339: %q", errValidation, ev.TS)
 	}
-	_ = ts
 	switch ev.Type {
 	case protocol.TypeHeartbeat:
 		var d protocol.HeartbeatData

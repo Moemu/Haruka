@@ -80,7 +80,7 @@ type DeviceData struct {
 }
 
 type LocationData struct {
-	Source    string `json:"source"` // ip | gps_coarse
+	Source    string `json:"source"` // ip | gps_coarse | manual（采集端手动覆盖）
 	Precision string `json:"precision"`
 	Country   string `json:"country,omitempty"`
 	Province  string `json:"province,omitempty"`

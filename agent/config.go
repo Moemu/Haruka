@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"haruka/protocol"
 )
 
 // Config 是 haruka-agent.yml 的原始形态（字符串字段便于 YAML 表达时长）。
@@ -167,8 +169,18 @@ func ValidateConfig(cfg Config) (Runtime, error) {
 	default:
 		return rt, fmt.Errorf("location.mode 只能是 server、local 或 off")
 	}
-	if cfg.Location.Override != "" || cfg.Privacy.HomeDistrict != "" {
-		return rt, fmt.Errorf("location.override 和 privacy.home_district 尚未实现，请留空")
+	rt.Cfg.Location.Override = strings.TrimSpace(rt.Cfg.Location.Override)
+	rt.Cfg.Privacy.HomeDistrict = strings.TrimSpace(rt.Cfg.Privacy.HomeDistrict)
+	// 端侧产出位置只在 mode=local 下生效：server 由服务端按连接 IP 解析
+	// （端侧再上报即双源），off 不产生位置（设计案 6.3 节）。
+	if (rt.Cfg.Location.Override != "" || rt.Cfg.Privacy.HomeDistrict != "") && rt.Cfg.Location.Mode != "local" {
+		return rt, fmt.Errorf("location.override 与 privacy.home_district 仅支持 location.mode: local")
+	}
+	if o := rt.Cfg.Location.Override; o != "" {
+		// 与服务端 ingest 拒收同口径，避免配置值整包卡死上报批次。
+		if err := protocol.CheckDisplayString("location.override", o, 64); err != nil {
+			return rt, err
+		}
 	}
 	return rt, nil
 }

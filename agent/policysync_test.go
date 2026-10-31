@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -75,5 +76,47 @@ func TestLocationCollectorGatesOnPolicySync(t *testing.T) {
 	// 确认后发送（whoami-ip 不可达 → 返回错误，证明确实发起了请求）。
 	if _, err := loc.Tick(time.Now()); err == nil {
 		t.Fatal("确认后应发起 whoami-ip 请求")
+	}
+}
+
+// override 手动覆盖：不取出口 IP、不查解析库，直接上报 manual 城市；
+// home_district 命中时附 zone=home（设计案 6.3 节）。
+func TestLocationCollectorOverrideAndHomeZone(t *testing.T) {
+	deps := Deps{DeviceID: "d_test", DeviceKind: protocol.KindDesktop, Seq: &Seq{mu: make(chan struct{}, 1)}, Log: discardLogger()}
+	loc := NewLocationCollector(deps, "local")
+	loc.serverURL = "http://127.0.0.1:1" // 不可达：override 路径不应发起任何请求
+	loc.override = "杭州市"
+	loc.homeDistrict = "南京市"
+	ps := NewPolicySync(testRuntime(t, func(c *Config) { c.Location.Mode = "local" }), discardLogger())
+	loc.deps.Policy = ps
+	// 策略未确认：override 也不得发送。
+	if events, err := loc.Tick(time.Now()); err != nil || len(events) != 0 {
+		t.Fatalf("策略未确认前 override 不得发送: %v %v", events, err)
+	}
+	ps.mu.Lock()
+	ps.confirmed = "local"
+	ps.mu.Unlock()
+	events, err := loc.Tick(time.Now())
+	if err != nil || len(events) != 1 {
+		t.Fatalf("override 应直接产出位置事件: %v %v", events, err)
+	}
+	var d protocol.LocationData
+	if err := json.Unmarshal(events[0].Data, &d); err != nil {
+		t.Fatal(err)
+	}
+	if d.Source != "manual" || d.Precision != protocol.PrecisionCity || d.City != "杭州市" {
+		t.Fatalf("override 负载错误: %+v", d)
+	}
+	if d.Zone != "" {
+		t.Fatalf("home_district 未命中不得附 zone: %q", d.Zone)
+	}
+	// 命中市名：附 zone=home。
+	loc.homeDistrict = "杭州市"
+	events, _ = loc.Tick(time.Now())
+	if err := json.Unmarshal(events[0].Data, &d); err != nil {
+		t.Fatal(err)
+	}
+	if d.Zone != protocol.ZoneHome {
+		t.Fatalf("home_district 命中应附 zone=home: %q", d.Zone)
 	}
 }

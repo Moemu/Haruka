@@ -211,7 +211,14 @@ docker run -d --name haruka-server \
 | server | 采集端 `location.mode: server`；服务端 `location_lookup_db` 指向 xdb | 服务端解析连接 IP，派生粗略行政区名称 |
 | local | 采集端 `location.mode: local`、`collectors.location: true` 和 `location.local_db` | 从自己的服务取得出口 IP，在设备本机解析后上报行政区名称 |
 
-采集端会同步服务端定位策略。只有 local 策略确认成功后才发送本地位置事件。IP 定位可能显示代理或运营商所在地，无法保证区级准确度。桌面采集端的 `location.override` 和 `privacy.home_district` 尚未实现，填写非空值会报错；Android 应用已支持家区判定（在家模式）。
+采集端会同步服务端定位策略。只有 local 策略确认成功后才发送本地位置事件。IP 定位可能显示代理或运营商所在地，无法保证区级准确度。
+
+`location.mode: local` 下可再配两个字段：
+
+- `location.override`：手动指定常驻城市，如 `"杭州市"`。代理上网导致出口 IP 解析失真时用。配置后不再取出口 IP、不查解析库，直接上报该城市。
+- `privacy.home_district`：家的所在市名，如 `"杭州市"`。上报位置命中时显示「在家」。IP 解析库没有区县数据，桌面端填市或省名；区县级判定只有 Android 应用支持。
+
+两个字段都要求 `location.mode: local`，其余模式下填写会在启动时报错。
 
 配置示例见 [服务端](examples/haruka-server.example.yml) 和 [采集端](examples/haruka-agent.example.yml)。配置修改后需重启。历史事件默认保留 7 天（`retention.events`），过期位置可能继续作为旧观测展示，页面会标注时间。
 
@@ -233,7 +240,7 @@ docker run -d --name haruka-server \
 ## 后续计划🌱
 
 - [x] 内置限流与服务端日志轮转。
-- [ ] 定位手动覆盖；IP 定位在真实出口 IP 场景下的验证。
+- [ ] IP 定位在真实出口 IP 场景下的验证（手动覆盖已实现）。
 
 ## 参与开发🤝
 

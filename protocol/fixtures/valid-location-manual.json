@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "device_id": "d_9f3ac2",
+  "device_kind": "desktop",
+  "sent_at": "2026-10-03T14:00:00Z",
+  "events": [
+    {
+      "id": "e_0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+      "seq": 4824,
+      "ts": "2026-10-03T13:59:43Z",
+      "type": "location",
+      "data": { "source": "manual", "precision": "city", "city": "杭州", "district": null, "zone": null }
+    }
+  ]
+}

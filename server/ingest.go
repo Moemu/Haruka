@@ -10,10 +10,8 @@ import (
 	"math"
 	"net"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"haruka/protocol"
 )
@@ -171,7 +169,7 @@ func validateEvent(ev *protocol.Event) error {
 		if err := decodeStrict(ev.Data, &d); err != nil {
 			return err
 		}
-		if d.Source != "ip" && d.Source != "gps_coarse" {
+		if d.Source != "ip" && d.Source != "gps_coarse" && d.Source != "manual" {
 			return fmt.Errorf("%w: location.source 非法", errValidation)
 		}
 		if d.Zone != "" && d.Zone != protocol.ZoneHome && d.Zone != protocol.ZoneSchool {
@@ -260,53 +258,16 @@ func decodeStrict(raw []byte, out any) error {
 	return nil
 }
 
-// checkDisplayString 校验可展示字符串（project 与 manual.text 共用的底线规则）：
-// 长度上限、禁止 URL 与坐标模式——合法字段里塞路径/坐标是真实风险（设计案 11 节）。
+// checkDisplayString 校验可展示字符串（project 与 manual.text 共用的底线规则）。
+// 规则实现在 protocol.CheckDisplayString，采集端配置预检共用同一口径。
 func checkDisplayString(field, v string, maxRunes int) error {
-	if v == "" {
-		return nil
-	}
-	if len([]rune(v)) > maxRunes {
-		return fmt.Errorf("%w: %s 过长", errValidation, field)
-	}
-	if strings.Contains(v, "://") {
-		return fmt.Errorf("%w: %s 禁止包含 URL", errValidation, field)
-	}
-	if isCoordPair(v) {
-		return fmt.Errorf("%w: %s 疑似坐标", errValidation, field)
-	}
-	if strings.ContainsAny(v, `/\`) || ipv4Pattern.MatchString(v) {
-		return fmt.Errorf("%w: %s 疑似路径或 IP", errValidation, field)
-	}
-	for _, token := range ipv6Pattern.FindAllString(v, -1) {
-		if net.ParseIP(token) != nil {
-			return fmt.Errorf("%w: %s 疑似 IP", errValidation, field)
-		}
-	}
-	for _, c := range v {
-		if unicode.IsControl(c) {
-			return fmt.Errorf("%w: %s 含控制字符", errValidation, field)
-		}
+	if err := protocol.CheckDisplayString(field, v, maxRunes); err != nil {
+		return fmt.Errorf("%w: %v", errValidation, err)
 	}
 	return nil
 }
 
-// isCoordPair 识别「31.19, 121.43」形态的经纬度对。
-var ipv4Pattern = regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`)
-var ipv6Pattern = regexp.MustCompile(`(?:[0-9a-fA-F]{0,4}:){2,}[0-9a-fA-F:.]*`)
 var deviceIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
-var coordinatePattern = regexp.MustCompile(`([-+]?\d{1,3}(?:\.\d+)?)\s*[,，]\s*([-+]?\d{1,3}(?:\.\d+)?)`)
-
-func isCoordPair(s string) bool {
-	for _, pair := range coordinatePattern.FindAllStringSubmatch(s, -1) {
-		lat, _ := strconv.ParseFloat(pair[1], 64)
-		lon, _ := strconv.ParseFloat(pair[2], 64)
-		if lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
-			return true
-		}
-	}
-	return false
-}
 
 // --- ingest 规则应用 ---
 

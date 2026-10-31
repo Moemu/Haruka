@@ -20,9 +20,11 @@ collectors:
 location:
   mode: off                # off | server（服务端 xdb）| local（本机 xdb）
   local_db: geo/ip2region.xdb
+  override: ""             # 手动指定常驻城市如 "杭州市"（需 mode: local），代理上网解析失真时用
 
 privacy:
   away_threshold: 5m       # 空闲超过该时长记 away
+  home_district: ""        # 家的所在市名（需 mode: local），命中显示「在家」
   file_type: false         # 是否上报正在编辑的文件扩展名
 
 activity:

@@ -22,9 +22,11 @@ func NewCollectors(deps Deps, rt *Runtime) []TickCollector {
 	if rt.Cfg.Collectors.Location {
 		loc := NewLocationCollector(deps, rt.Cfg.Location.Mode)
 		loc.serverURL = rt.ServerURL
-		if rt.Cfg.Location.Mode == "local" {
+		loc.override = rt.Cfg.Location.Override
+		loc.homeDistrict = rt.Cfg.Privacy.HomeDistrict
+		if rt.Cfg.Location.Mode == "local" && rt.Cfg.Location.Override == "" {
 			// 方案 C：本地解析库加载失败则降级为 degraded（doctor 如实展示），
-			// 不阻断整个代理启动。
+			// 不阻断整个代理启动；手动覆盖时不需要解析库。
 			if err := loc.EnableLocal(rt.Cfg.Location.LocalDB); err != nil && deps.Log != nil {
 				deps.Log.Warn("本地位置解析库加载失败，location 降级", "db", rt.Cfg.Location.LocalDB, "error", err)
 			}

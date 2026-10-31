@@ -547,3 +547,19 @@ func TestLocationZoneDisplayAndAllowlist(t *testing.T) {
 		t.Fatalf("白名单外的 zone 应被拒收: %v", err)
 	}
 }
+
+// source=manual（采集端 location.override 手动覆盖）走城市展示，zone 命中仍优先。
+func TestLocationManualSource(t *testing.T) {
+	te := newTestEnv(t, nil)
+	dev := te.addDevice(t, protocol.KindDesktop, 10*time.Minute)
+	te.emit(t, dev, protocol.TypeLocation, te.now,
+		protocol.LocationData{Source: "manual", Precision: "city", City: "杭州"})
+	if snap := te.snapshot(t); snap.Location == nil || snap.Location.Display != "杭州" {
+		t.Fatalf("manual 城市应原样展示: %+v", snap.Location)
+	}
+	te.emit(t, dev, protocol.TypeLocation, te.now.Add(time.Minute),
+		protocol.LocationData{Source: "manual", Precision: "city", City: "杭州", Zone: protocol.ZoneHome})
+	if snap := te.snapshot(t); snap.Location == nil || snap.Location.Display != "在家" {
+		t.Fatalf("manual + zone=home 应展示「在家」: %+v", snap.Location)
+	}
+}

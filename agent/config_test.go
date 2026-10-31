@@ -39,7 +39,16 @@ func TestValidateConfigRejects(t *testing.T) {
 		{"公网明文", func(c *Config) { c.Server = "http://example.com" }, "HTTPS"},
 		{"URL 凭据", func(c *Config) { c.Server = "https://user:pass@example.com" }, "URL"},
 		{"URL 查询", func(c *Config) { c.Server = "https://example.com?token=test" }, "URL"},
-		{"未实现的在家模式", func(c *Config) { c.Privacy.HomeDistrict = "测试区" }, "尚未实现"},
+		{"在家模式要求 local", func(c *Config) { c.Privacy.HomeDistrict = "测试区" }, "仅支持 location.mode: local"},
+		{"覆盖要求 local", func(c *Config) { c.Location.Override = "上海" }, "仅支持 location.mode: local"},
+		{"覆盖含 URL", func(c *Config) {
+			c.Location.Mode = "local"
+			c.Location.Override = "https://x.example.com"
+		}, "禁止包含 URL"},
+		{"覆盖过长", func(c *Config) {
+			c.Location.Mode = "local"
+			c.Location.Override = strings.Repeat("市", 65)
+		}, "过长"},
 		{"缺 token", func(c *Config) { c.Token = "" }, "token"},
 		{"缺 device_id", func(c *Config) { c.DeviceID = "" }, "device_id"},
 		{"location 模式", func(c *Config) { c.Location.Mode = "auto" }, "location.mode"},
@@ -57,6 +66,24 @@ func TestValidateConfigRejects(t *testing.T) {
 				t.Fatalf("期望错误包含 %q，得到 %v", tc.want, err)
 			}
 		})
+	}
+}
+
+func TestValidateConfigOverrideTrims(t *testing.T) {
+	cfg := defaultConfig()
+	cfg.Server = "https://h.example.com"
+	cfg.Token = "t"
+	cfg.DeviceID = "d_x"
+	cfg.Location.Mode = "local"
+	cfg.Collectors.Location = true
+	cfg.Location.Override = " 杭州市 "
+	cfg.Privacy.HomeDistrict = " 杭州市 "
+	rt, err := ValidateConfig(cfg)
+	if err != nil {
+		t.Fatalf("ValidateConfig: %v", err)
+	}
+	if rt.Cfg.Location.Override != "杭州市" || rt.Cfg.Privacy.HomeDistrict != "杭州市" {
+		t.Fatalf("override/home_district 应去空白: %q %q", rt.Cfg.Location.Override, rt.Cfg.Privacy.HomeDistrict)
 	}
 }
 

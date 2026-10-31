@@ -97,7 +97,7 @@
       "additionalProperties": false,
       "required": ["source", "precision"],
       "properties": {
-        "source": { "enum": ["ip", "gps_coarse"] },
+        "source": { "enum": ["ip", "gps_coarse", "manual"] },
         "precision": { "enum": ["country", "province", "city", "district"] },
         "country": { "type": "string", "maxLength": 64 },
         "province": { "type": ["string", "null"], "maxLength": 64 },

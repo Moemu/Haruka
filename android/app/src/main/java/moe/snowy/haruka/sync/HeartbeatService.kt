@@ -120,7 +120,8 @@ class HeartbeatService : Service() {
             activity = if (settings.activityEnabled) {
                 ForegroundApp.sample(this, now, interactive, keyguardLocked)
             } else null,
-            device = ForegroundApp.battery(this).copy(steps = ForegroundApp.steps(this) ?: 0),
+            device = ForegroundApp.battery(this)
+                .copy(steps = ForegroundApp.steps(this) { container.logs.log("tick", it) } ?: 0),
         )
         val nextTick = System.currentTimeMillis() + settings.heartbeatMin * 60_000L
 

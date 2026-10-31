@@ -118,26 +118,42 @@ object ForegroundApp {
         return DeviceData(batteryLevel = pct.coerceIn(0, 100), charging = charging)
     }
 
-    /** 当日累计步数；来源或权限不满足返回 null（调用方省略 steps 字段）。 */
-    fun steps(ctx: Context): Int? = try {
+    /**
+     * 当日累计步数；来源或权限不满足返回 null（调用方省略 steps 字段）。
+     * 查询用 2026-10-31 探针在真机验证过的全列形态——单列 projection 当日实测
+     * 静默失败（cursor 无目标列时 sum 恒 0，服务端以 0 为缺席）。首次失败经
+     * warn 输出一次诊断，之后静默。
+     */
+    fun steps(ctx: Context, warn: ((String) -> Unit)? = null): Int? = try {
         val dayStart = java.time.LocalDate.now()
             .atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
         ctx.contentResolver.query(
             android.net.Uri.parse("content://com.miui.providers.steps/item"),
-            arrayOf("_steps"),
+            arrayOf("_begin_time", "_end_time", "_mode", "_steps"),
             "_begin_time >= ?",
             arrayOf(dayStart.toString()),
             null,
         )?.use { c ->
             val iSteps = c.getColumnIndex("_steps")
-            var sum = 0
+            var sum = 0L
             while (c.moveToNext()) {
-                if (iSteps >= 0) sum += c.getInt(iSteps)
+                if (iSteps >= 0) sum += c.getLong(iSteps)
             }
-            sum
+            if (iSteps < 0) warnDiagnostic("cursor 无 _steps 列", warn)
+            sum.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         }
-    } catch (_: Throwable) {
+    } catch (t: Throwable) {
+        warnDiagnostic("${t.javaClass.simpleName}: ${t.message.orEmpty().take(120)}", warn)
         null
+    }
+
+    @Volatile
+    private var stepsDiagnosticLogged = false
+
+    private fun warnDiagnostic(detail: String, warn: ((String) -> Unit)?) {
+        if (stepsDiagnosticLogged) return
+        stepsDiagnosticLogged = true
+        warn?.invoke("步数查询失败：$detail")
     }
 
     private fun labelOf(ctx: Context, pkg: String): String? = try {

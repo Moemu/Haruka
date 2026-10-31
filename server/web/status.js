@@ -133,9 +133,29 @@
     name.textContent = d.name || DEVICE_LABEL[d.kind] || "设备";
     var sub = document.createElement("p");
     sub.className = "device-sub";
-    var subText = charging ? "充电中" : (low ? "电量 " + level + "% · 该充电啦" : "电量 " + level + "%");
-    if (d.steps > 0) { subText += " · 今日 " + d.steps + " 步"; }
-    sub.textContent = subText;
+    // 各片段整体不拆行（CJK 任意字间可断，宽裕度紧张时会撕词）：
+    // 装不下时整段换行，断点只落在段间的分隔符上。
+    var parts = [];
+    if (charging) {
+      parts.push("充电中");
+    } else {
+      var levelPart = document.createElement("span");
+      levelPart.style.whiteSpace = "nowrap";
+      levelPart.textContent = "电量 " + level + "%";
+      parts.push(levelPart);
+      if (low) { parts.push("该充电啦"); }
+    }
+    if (d.steps > 0) {
+      var stepsPart = document.createElement("span");
+      stepsPart.style.whiteSpace = "nowrap";
+      stepsPart.textContent = "今日 " + d.steps + " 步";
+      parts.push(stepsPart);
+    }
+    parts.forEach(function (part, i) {
+      if (i > 0) { sub.appendChild(document.createTextNode(" · ")); }
+      if (typeof part === "string") { sub.appendChild(document.createTextNode(part)); }
+      else { sub.appendChild(part); }
+    });
     meta.appendChild(name);
     meta.appendChild(sub);
     row.appendChild(meta);

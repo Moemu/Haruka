@@ -55,6 +55,9 @@ body::before {
 }
 
 .wrap {
+  /* width 定死为视口宽：flex 子项横向 auto 边距会禁用 stretch，缺了它
+     版心会退化成内容自然宽度，卡片跟着内容而不是页面大小变宽窄 */
+  width: 100%;
   max-width: 880px;
   margin: auto; /* 弹性列内四向居中：高分辨率下内容块在壁纸中构图居中 */
   padding: 24px 24px 32px;
@@ -139,7 +142,8 @@ body::before {
 /* 卡片（bento 网格）：1px 细边、紧圆角、无阴影 */
 .cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* minmax(0,1fr)：轨道纯按页面宽度等分，内容再长也只换行、不挤宽轨道 */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   padding: 8px 0 8px;
 }
@@ -316,7 +320,7 @@ body.mode-hidden #page-hidden {
       url("/bg-mobile.webp") center / cover no-repeat;
   }
   .hero { padding: 40px 0 36px; }
-  .cards { grid-template-columns: 1fr; }
+  .cards { grid-template-columns: minmax(0, 1fr); }
   .card-wide { grid-column: auto; }
   .week { gap: 16px; }
 }

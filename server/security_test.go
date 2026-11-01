@@ -18,6 +18,7 @@ func TestDisplayFieldsRejectSensitiveShapes(t *testing.T) {
 			protocol.ActivityData{Kind: "app", App: value},
 			protocol.LocationData{Source: "ip", Precision: "city", City: value},
 			protocol.ManualData{Mood: "happy", Text: value},
+			protocol.ManualData{Mood: value, Text: "附言"},
 		} {
 			typ := protocol.TypeActivity
 			switch data.(type) {

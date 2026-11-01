@@ -11,6 +11,7 @@ import moe.snowy.haruka.protocol.Envelope
 import moe.snowy.haruka.protocol.Wire
 import moe.snowy.haruka.protocol.endOfTodayUtcMs
 import moe.snowy.haruka.protocol.presenceSample
+import moe.snowy.haruka.protocol.validateManualMood
 import moe.snowy.haruka.protocol.validateManualText
 import java.io.File
 import kotlin.test.Test
@@ -30,6 +31,7 @@ class ProtocolGoldenTest {
         "valid-presence",
         "valid-activity",
         "valid-manual",
+        "valid-manual-indefinite",
         "valid-location-city",
         "valid-location-district",
         "valid-device",
@@ -80,6 +82,15 @@ class ProtocolGoldenTest {
         assertEquals(JsonPrimitive(true), obj["clear"])
         assertNull(obj["mood"])
         assertNull(obj["text"])
+    }
+
+    @Test
+    fun `manual without until omits until key for indefinite status`() {
+        val ev = Wire.manualEvent(seq = 1, nowMs = 0, data = moe.snowy.haruka.protocol.ManualData(mood = "真冬", text = null, until = null))
+        val obj = ev.data.jsonObject
+        assertEquals(JsonPrimitive("真冬"), obj["mood"])
+        assertNull(obj["until"], "无限期状态不得携带 until 键")
+        assertNull(obj["clear"])
     }
 
     private fun JsonObject.stripNulls(): JsonElement = JsonObject(
@@ -134,6 +145,18 @@ class CoreLogicTest {
         assertNotNull(validateManualText("192.168.1.1 测试"))
         assertNotNull(validateManualText("长".repeat(61)))
         assertNull(validateManualText("长".repeat(60)))
+    }
+
+    @Test
+    fun `manual mood validation mirrors server rules`() {
+        assertNull(validateManualMood(""))
+        assertNull(validateManualMood("真冬"))
+        assertNull(validateManualMood("Muika?"))
+        assertNotNull(validateManualMood("a/b"))
+        assertNotNull(validateManualMood("31.19, 121.43"))
+        assertNotNull(validateManualMood("192.168.1.1"))
+        assertNotNull(validateManualMood("长".repeat(17)))
+        assertNull(validateManualMood("长".repeat(16)))
     }
 
     @Test

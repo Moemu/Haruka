@@ -304,6 +304,27 @@ func TestAssertion5ManualOrderingAndTombstone(t *testing.T) {
 	}
 }
 
+// until 缺席的手动状态无限期生效：推进时钟也不过期，快照中 until 缺席。
+func TestManualWithoutUntilIsIndefinite(t *testing.T) {
+	te := newTestEnv(t, nil)
+	phone := te.addDevice(t, protocol.KindAndroid, 10*time.Minute)
+	te.heartbeat(t, phone)
+
+	te.emit(t, phone, protocol.TypeManual, te.now, protocol.ManualData{Mood: "真冬"})
+	te.now = te.now.Add(5 * time.Hour)
+	snap := te.snapshot(t)
+	if snap.Mood == nil || snap.Mood.Mood != "真冬" || snap.Mood.Until != "" {
+		t.Fatalf("until 缺席应无限期生效: %+v", snap.Mood)
+	}
+
+	// 带期限的设置覆盖后照旧过期。
+	te.emit(t, phone, protocol.TypeManual, te.now, protocol.ManualData{Mood: "tired", Until: formatTime(te.now.Add(time.Hour))})
+	te.now = te.now.Add(2 * time.Hour)
+	if snap := te.snapshot(t); snap.Mood != nil {
+		t.Fatalf("带期限状态过期后应消失: %+v", snap.Mood)
+	}
+}
+
 // 断言 6：定位策略由服务端强制执行。
 func TestAssertion6LocationPolicyEnforced(t *testing.T) {
 	te := newTestEnv(t, func(c *Config) {})

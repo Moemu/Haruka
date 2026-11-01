@@ -235,7 +235,7 @@ docker run -d --name haruka-server \
 | `POST /v1/device-policy` | 设备或 owner 令牌 | 修改自身或指定设备定位策略 |
 | `POST /v1/control` | owner Bearer 令牌 | `hide` / `show` |
 
-事件契约见 [JSON Schema](protocol/schema/envelope.schema.json) 和 [示例事件](protocol/fixtures/)。在线判定以心跳为准，观测新鲜度按事件时间计算。手动心情可从 Android 应用的「手动状态」页发布；桌面端暂无输入入口。
+事件契约见 [JSON Schema](protocol/schema/envelope.schema.json) 和 [示例事件](protocol/fixtures/)。在线判定以心跳为准，观测新鲜度按事件时间计算。手动状态（自定义状态词 + 附言，可带期限或长期有效）可从 Android 应用的「手动状态」页发布；桌面端暂无输入入口。
 
 ## 后续计划🌱
 

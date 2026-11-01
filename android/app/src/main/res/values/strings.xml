@@ -80,16 +80,19 @@
     <string name="settings_school_district_hint">在学校时状态页显示「在学校」。填行政区全名（如：柳北区），留空关闭。</string>
 
     <!-- 手动状态 -->
-    <string name="manual_title">现在的心情</string>
+    <string name="manual_title">现在的状态</string>
+    <string name="manual_mood_hint">状态词（16 字以内，如人格名）</string>
     <string name="manual_note_hint">附言（可选，60 字以内）</string>
     <string name="manual_expiry_1h">1 小时</string>
     <string name="manual_expiry_4h">4 小时</string>
     <string name="manual_expiry_today">今天</string>
+    <string name="manual_expiry_indef">长期</string>
     <string name="manual_publish">发布</string>
     <string name="manual_clear">清除</string>
     <string name="manual_saved_offline">已保存待同步</string>
     <string name="manual_published">已发布，等待下一轮同步</string>
     <string name="manual_active_until">有效期至 %1$s</string>
+    <string name="manual_active_indef">长期有效，直到切换或清除</string>
     <string name="manual_char_count">%1$d / 60</string>
 
     <!-- 设置 -->

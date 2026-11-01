@@ -19,11 +19,6 @@ import (
 // 本文件实现设计案 5.3 节的事件分类规则与 5.2 节的字段校验。
 // 校验是严格的：未知字段、坐标字段、URL/坐标模式的字符串一律拒绝。
 
-var validMoods = map[string]bool{
-	"happy": true, "focused": true, "tired": true,
-	"anxious": true, "chilling": true, "sick": true,
-}
-
 var (
 	errAuth       = fmt.Errorf("鉴权失败")
 	errForbidden  = fmt.Errorf("设备不匹配")
@@ -213,8 +208,9 @@ func validateEvent(ev *protocol.Event) error {
 		if err := decodeStrict(ev.Data, &d); err != nil {
 			return err
 		}
-		if d.Mood != "" && !validMoods[d.Mood] {
-			return fmt.Errorf("%w: mood 非法", errValidation)
+		// mood 是自定义状态词（如人格名），只做展示安全形状校验，不做封闭枚举。
+		if err := checkDisplayString("mood", d.Mood, 16); err != nil {
+			return err
 		}
 		// 手动文本：码点 ≤60、字节 ≤240 兜底；坐标与 URL 模式拒收（设计案 11 节）。
 		if len([]rune(d.Text)) > 60 || len(d.Text) > 240 {
@@ -499,14 +495,17 @@ func (e *Engine) applyManual(tx *sql.Tx, device Device, ev *protocol.Event, rece
 		return nil // 同秒或更旧：设置让位于已有状态
 	}
 
-	until := ts.Add(4 * time.Hour)
+	// until 缺席 = 无限期（接管时长不确定），DB 存 NULL；带期限状态照旧。
+	var until sql.NullString
 	if data.Until != "" {
-		if u, err := parseTime(data.Until); err == nil {
-			until = u
+		u, err := parseTime(data.Until)
+		if err != nil {
+			return err
 		}
+		until = sql.NullString{String: formatTime(u), Valid: true}
 	}
 	_, err = tx.Exec(`UPDATE manual_state SET updated_ts = ?, cleared = 0, cleared_ts = NULL, data = ?, until = ? WHERE id = 1`,
-		ev.TS, string(ev.Data), formatTime(until))
+		ev.TS, string(ev.Data), until)
 	return err
 }
 

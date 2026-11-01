@@ -96,9 +96,13 @@ func TestIngestStrictValidation(t *testing.T) {
 			"type": "location",
 			"data": map[string]any{"source": "gps_coarse", "precision": "city", "city": "上海", "latitude": 31.19},
 		},
-		"非法 mood": {
+		"URL 进 mood": {
 			"type": "manual",
-			"data": map[string]any{"mood": "ecstatic"},
+			"data": map[string]any{"mood": "a/b"},
+		},
+		"坐标进 mood": {
+			"type": "manual",
+			"data": map[string]any{"mood": "31.19, 121.43"},
 		},
 		"未知类型": {
 			"type": "health",

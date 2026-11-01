@@ -71,7 +71,7 @@ func TestFixtures(t *testing.T) {
 	valid := []string{
 		"valid-presence.json", "valid-activity.json", "valid-location-city.json",
 		"valid-location-district.json", "valid-location-manual.json", "valid-manual.json",
-		"valid-heartbeat.json", "valid-device.json",
+		"valid-manual-indefinite.json", "valid-heartbeat.json", "valid-device.json",
 	}
 	for _, name := range valid {
 		var env Envelope

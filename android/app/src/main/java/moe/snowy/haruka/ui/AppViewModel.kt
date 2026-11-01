@@ -205,13 +205,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- 手动状态 ----
 
+    /** untilMs 为 0 表示无限期（人格接管时长不确定），事件不带 until。 */
     fun publishManual(mood: String, text: String, untilMs: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             val trimmed = text.trim()
             val data = ManualData(
                 mood = mood.ifBlank { null },
                 text = trimmed.ifBlank { null },
-                until = Wire.rfc3339(untilMs),
+                until = if (untilMs == 0L) null else Wire.rfc3339(untilMs),
             )
             val now = System.currentTimeMillis()
             val ev = Wire.manualEvent(c.spool.nextSeq(), now, data)
@@ -222,6 +223,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 ),
             )
             c.settings.setManual(mood, trimmed, untilMs)
+            c.settings.addManualMood(mood)
             val synced = c.syncNowIfIdle()
             _message.value = if (synced) appContext.getString(R.string.manual_published)
             else appContext.getString(R.string.manual_saved_offline)

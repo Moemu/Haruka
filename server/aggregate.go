@@ -43,9 +43,10 @@ type ActivityV struct {
 }
 
 type MoodV struct {
-	Mood  string `json:"mood"`
-	Text  string `json:"text,omitempty"`
-	Until string `json:"until"`
+	Mood string `json:"mood"`
+	Text string `json:"text,omitempty"`
+	// Until 为空表示无限期（until 缺席的手动状态，接管时长不确定）。
+	Until string `json:"until,omitempty"`
 }
 
 // DeviceV 是一台在线设备的自述状态；Battery 为空表示该设备没有上报电量
@@ -323,7 +324,7 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 		}
 	}
 
-	// manual：全局单条，未清除且未过期。
+	// manual：全局单条，未清除且未过期；until 为 NULL 表示无限期。
 	var updatedTS, data sql.NullString
 	var cleared bool
 	var until sql.NullString
@@ -332,8 +333,13 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
-	if !cleared && data.Valid && until.Valid {
-		if u, err := parseTime(until.String); err == nil && u.After(now) {
+	if !cleared && data.Valid {
+		if !until.Valid {
+			var md protocol.ManualData
+			if json.Unmarshal([]byte(data.String), &md) == nil {
+				out.Mood = &MoodV{Mood: md.Mood, Text: md.Text}
+			}
+		} else if u, err := parseTime(until.String); err == nil && u.After(now) {
 			var md protocol.ManualData
 			if json.Unmarshal([]byte(data.String), &md) == nil {
 				out.Mood = &MoodV{Mood: md.Mood, Text: md.Text, Until: formatTime(u)}

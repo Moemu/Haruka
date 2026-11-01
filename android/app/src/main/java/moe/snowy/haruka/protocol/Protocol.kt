@@ -105,7 +105,7 @@ data class DeviceData(
 @Serializable
 object HeartbeatData
 
-/** 协议 mood 枚举，与服务端 validMoods 一致（server/ingest.go）。 */
+/** 手动状态种子词表，新增词由发布动作自动入表（settings 持久化）。 */
 val VALID_MOODS = listOf("happy", "focused", "tired", "anxious", "chilling", "sick")
 
 object Wire {
@@ -188,10 +188,25 @@ fun validateManualText(text: String): String? {
     if (text.isEmpty()) return null
     if (text.codePointCount(0, text.length) > 60) return "附言超过 60 字"
     if (text.toByteArray(Charsets.UTF_8).size > 240) return "附言超过 60 字"
-    if (text.contains("://")) return "附言不能包含链接"
-    if (Regex("\\s*-?\\d+\\.\\d+\\s*,").containsMatchIn(text)) return "附言疑似坐标"
-    if (text.contains('/') || text.contains('\\')) return "附言不能包含路径"
-    if (Regex("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}").containsMatchIn(text)) return "附言疑似 IP 地址"
+    return displayShapeError(text, "附言")
+}
+
+/**
+ * 状态词的服务端预检（server/ingest.go checkDisplayString("mood", …, 16) 镜像）：
+ * 码点 ≤16，形状规则与附言一致。
+ */
+fun validateManualMood(mood: String): String? {
+    if (mood.isEmpty()) return null
+    if (mood.codePointCount(0, mood.length) > 16) return "状态词超过 16 字"
+    return displayShapeError(mood, "状态词")
+}
+
+/** 展示字符串形状底线（protocol/display.go CheckDisplayString 的客户端镜像），label 用于错误文案。 */
+private fun displayShapeError(v: String, label: String): String? {
+    if (v.contains("://")) return "$label 不能包含链接"
+    if (Regex("\\s*-?\\d+\\.\\d+\\s*,").containsMatchIn(v)) return "$label 疑似坐标"
+    if (v.contains('/') || v.contains('\\')) return "$label 不能包含路径"
+    if (Regex("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}").containsMatchIn(v)) return "$label 疑似 IP 地址"
     return null
 }
 

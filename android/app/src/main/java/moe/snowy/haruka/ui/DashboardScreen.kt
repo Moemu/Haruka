@@ -175,7 +175,8 @@ private fun SnapshotPreviewCard(snapshot: PublicSnapshot?) {
                         Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     snapshot.mood?.let { m ->
-                        val label = moodLabel(m.mood.orEmpty())
+                        // 种子词映射中文，自定义状态词（人格名）原样展示。
+                        val label = moodLabel(m.mood.orEmpty()) ?: m.mood?.takeIf { it.isNotBlank() }
                         val parts = listOfNotNull(label, m.text?.takeIf { t -> t.isNotBlank() })
                         if (parts.isNotEmpty()) {
                             Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
@@ -187,7 +188,7 @@ private fun SnapshotPreviewCard(snapshot: PublicSnapshot?) {
     }
 }
 
-/** mood 枚举到展示映射，与状态页一致（design.md §10）。 */
+/** 种子词到展示映射（design.md §10）；词表之外的自定义状态词不经过这里，原样展示。 */
 fun moodLabel(mood: String): String? = when (mood) {
     "happy" -> "😊 开心"
     "focused" -> "🎯 专注"

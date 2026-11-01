@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -12,16 +11,17 @@ import (
 
 func fptr(f float64) *float64 { return &f }
 
-// fakeWakaTime 起一个假官方 API，校验 Basic auth 与 range 参数，返回固定数据。
-func fakeWakaTime(t *testing.T, apiKey string) *httptest.Server {
+// fakeWakaTime 起一个假官方 API，校验 Bearer token 与 range 参数，返回固定数据。
+func fakeWakaTime(t *testing.T, token string) *httptest.Server {
 	t.Helper()
+	auth := func(r *http.Request) bool { return r.Header.Get("Authorization") == "Bearer "+token }
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/users/current/summaries", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("range") != "Today" {
 			http.Error(w, "bad range", http.StatusBadRequest)
 			return
 		}
-		if got, want := r.Header.Get("Authorization"), "Basic "+base64.StdEncoding.EncodeToString([]byte(apiKey)); got != want {
+		if !auth(r) {
 			http.Error(w, "bad auth", http.StatusUnauthorized)
 			return
 		}
@@ -36,7 +36,7 @@ func fakeWakaTime(t *testing.T, apiKey string) *httptest.Server {
 		})
 	})
 	mux.HandleFunc("/api/v1/users/current/all_time_since_today", func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.Header.Get("Authorization"), "Basic "+base64.StdEncoding.EncodeToString([]byte(apiKey)); got != want {
+		if !auth(r) {
 			http.Error(w, "bad auth", http.StatusUnauthorized)
 			return
 		}
@@ -61,12 +61,12 @@ func readCoding(t *testing.T, e *Engine) string {
 }
 
 func TestWakaTimePollAndSnapshot(t *testing.T) {
-	te := newTestEnv(t, func(c *Config) { c.WakaTime.APIKey = "waka_test_key" })
-	srv := fakeWakaTime(t, "waka_test_key")
+	te := newTestEnv(t, func(c *Config) { c.WakaTime.Token = "waka_tok_test" })
+	srv := fakeWakaTime(t, "waka_tok_test")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	if err := te.e.pollWakaTime(ctx, srv.Client(), srv.URL+"/api/v1/users/current/", "waka_test_key"); err != nil {
+	if err := te.e.pollWakaTime(ctx, srv.Client(), srv.URL+"/api/v1/users/current/", "waka_tok_test"); err != nil {
 		t.Fatalf("pollWakaTime: %v", err)
 	}
 

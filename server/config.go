@@ -44,9 +44,10 @@ type Config struct {
 	// 空表示禁用派生（设备未上报位置时公开快照就没有位置字段）。
 	LocationLookupDB string `yaml:"location_lookup_db"`
 
-	// WakaTime 数据源：api_key 为空即停用（见 server/wakatime.go）。
+	// WakaTime 数据源：token 为个人 OAuth token（wakatime.com/oauth 生成），
+	// 为空即停用（见 server/wakatime.go）。
 	WakaTime struct {
-		APIKey string `yaml:"api_key"`
+		Token string `yaml:"token"`
 	} `yaml:"wakatime"`
 }
 

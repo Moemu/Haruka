@@ -2,11 +2,11 @@ package server
 
 // WakaTime 数据源：服务端定期拉取官方 API 的今日与累计编码时长，
 // 结果存入 server_state（键 "wakatime"），Snapshot 原样带出。
-// api_key 为空即停用；拉取失败保留旧值，等下一拍重试。
+// token 为个人 OAuth token（wakatime.com/oauth 生成），为空即停用；
+// 拉取失败保留旧值，等下一拍重试。API key 自 2026-11-01 起仅限插件使用。
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -29,10 +29,10 @@ type CodingV struct {
 	AsOf         string   `json:"as_of"`
 }
 
-// RunWakaTime 周期拉取编码时长；未配置 api_key 时立即返回。ctx 结束返回。
+// RunWakaTime 周期拉取编码时长；未配置 token 时立即返回。ctx 结束返回。
 func (e *Engine) RunWakaTime(ctx context.Context) {
-	apiKey := e.rt.Cfg.WakaTime.APIKey
-	if apiKey == "" {
+	token := e.rt.Cfg.WakaTime.Token
+	if token == "" {
 		return
 	}
 	e.log.Info("WakaTime 数据源已启用")
@@ -40,7 +40,7 @@ func (e *Engine) RunWakaTime(ctx context.Context) {
 	ticker := time.NewTicker(wakatimePollEvery)
 	defer ticker.Stop()
 	for {
-		if err := e.pollWakaTime(ctx, client, wakatimeBaseURL, apiKey); err != nil {
+		if err := e.pollWakaTime(ctx, client, wakatimeBaseURL, token); err != nil {
 			e.log.Warn("WakaTime 拉取失败，保留旧值", "error", err)
 		}
 		select {
@@ -51,8 +51,8 @@ func (e *Engine) RunWakaTime(ctx context.Context) {
 	}
 }
 
-func (e *Engine) pollWakaTime(ctx context.Context, client *http.Client, base, apiKey string) error {
-	cv, err := fetchWakaTime(ctx, client, base, apiKey)
+func (e *Engine) pollWakaTime(ctx context.Context, client *http.Client, base, token string) error {
+	cv, err := fetchWakaTime(ctx, client, base, token)
 	if err != nil {
 		return err
 	}
@@ -66,15 +66,13 @@ func (e *Engine) pollWakaTime(ctx context.Context, client *http.Client, base, ap
 	return err
 }
 
-func fetchWakaTime(ctx context.Context, client *http.Client, base, apiKey string) (CodingV, error) {
-	// Basic auth 值是 API key 原文的 base64（WakaTime 约定，非 user:pass）。
-	auth := "Basic " + base64.StdEncoding.EncodeToString([]byte(apiKey))
+func fetchWakaTime(ctx context.Context, client *http.Client, base, token string) (CodingV, error) {
 	req := func(path string, out any) error {
 		r, err := http.NewRequestWithContext(ctx, http.MethodGet, base+path, nil)
 		if err != nil {
 			return err
 		}
-		r.Header.Set("Authorization", auth)
+		r.Header.Set("Authorization", "Bearer "+token)
 		resp, err := client.Do(r)
 		if err != nil {
 			return err

@@ -81,7 +81,13 @@
 
     <!-- 手动状态 -->
     <string name="manual_title">现在的状态</string>
-    <string name="manual_mood_hint">状态词（16 字以内，如人格名）</string>
+    <string name="manual_mode_mood">情绪</string>
+    <string name="manual_mode_persona">人格</string>
+    <string name="manual_mood_hint">自定义情绪（16 字以内）</string>
+    <string name="persona_title">切换人格</string>
+    <string name="persona_hint">人格由服务端配置（封闭列表）；切换后长期生效，清除回落默认人格</string>
+    <string name="persona_choices_empty">服务端未配置人格列表（persona.list）</string>
+    <string name="persona_taking_over">当前接管：%1$s</string>
     <string name="manual_note_hint">附言（可选，60 字以内）</string>
     <string name="manual_expiry_1h">1 小时</string>
     <string name="manual_expiry_4h">4 小时</string>

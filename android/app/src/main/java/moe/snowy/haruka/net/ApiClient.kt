@@ -36,6 +36,7 @@ data class PublicSnapshot(
     val location: LocationView? = null,
     val activity: ActivityView? = null,
     val mood: MoodView? = null,
+    val persona: PersonaView? = null,
     val generated_at: String = "",
 ) {
     @Serializable
@@ -49,6 +50,20 @@ data class PublicSnapshot(
 
     @Serializable
     data class MoodView(val mood: String? = null, val text: String? = null, val until: String? = null)
+
+    @Serializable
+    data class PersonaView(val persona: String? = null, val text: String? = null, val default: Boolean = false)
+}
+
+/** GET /v1/capabilities 的插件清单（本端只关心 choices 私有槽位）。 */
+@Serializable
+data class Capabilities(val plugins: List<PluginInfo> = emptyList()) {
+    @Serializable
+    data class PluginInfo(
+        val name: String = "",
+        val title: String? = null,
+        val choices: List<String>? = null,
+    )
 }
 
 /** 服务端 HTTP 客户端：ingest / healthz / 公开快照 / device-policy / control。 */
@@ -86,6 +101,21 @@ class ApiClient {
     fun healthz(baseUrl: String): HttpResult = call(Request.Builder().url("$baseUrl/healthz").build())
 
     fun publicStatus(baseUrl: String): HttpResult = call(Request.Builder().url("$baseUrl/v1/public/status").build())
+
+    /** 插件清单（带设备令牌取私有槽位：persona choices 等）。 */
+    fun capabilities(baseUrl: String, token: String): HttpResult =
+        call(
+            Request.Builder()
+                .url("$baseUrl/v1/capabilities")
+                .header("Authorization", "Bearer $token")
+                .build(),
+        )
+
+    fun parseCapabilities(body: String): Capabilities? = try {
+        json.decodeFromString(Capabilities.serializer(), body)
+    } catch (e: Exception) {
+        null
+    }
 
     fun parseSnapshot(body: String): PublicSnapshot? = try {
         json.decodeFromString(PublicSnapshot.serializer(), body)

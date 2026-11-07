@@ -43,12 +43,16 @@ type Config struct {
 	// LocationLookupDB 是方案 A 的离线解析库（ip2region.xdb）路径；
 	// 空表示禁用派生（设备未上报位置时公开快照就没有位置字段）。
 	LocationLookupDB string `yaml:"location_lookup_db"`
+}
 
-	// WakaTime 数据源：token 为个人 OAuth token（wakatime.com/oauth 生成），
-	// 为空即停用（见 server/wakatime.go）。
-	WakaTime struct {
-		Token string `yaml:"token"`
-	} `yaml:"wakatime"`
+// reservedConfigKeys 是核心配置键（保留名黑名单）：插件（无论编译型还是
+// 声明型）不得占用同名配置节，装载时这些节归核心。与 Config 的 yaml 标签
+// 保持一致——新增核心字段时必须同步此表。
+var reservedConfigKeys = map[string]bool{
+	"listen": true, "db": true, "trusted_proxies": true, "cors_origins": true,
+	"rate_limit": true, "log_file": true, "freshness_lag": true,
+	"future_tolerance": true, "clock_skew_warn": true, "heartbeat_default_interval": true,
+	"retention": true, "on_hide": true, "aggregation": true, "location_lookup_db": true,
 }
 
 // Runtime 是补全默认值后的可运行配置。
@@ -69,6 +73,12 @@ type Runtime struct {
 	RateBurst int
 
 	LocationPriority []string
+
+	// PluginSections 是 yml 顶层里归插件命名空间的节（非保留名）：
+	// 键 = 插件名，值 = 该节原始节点。装载路径唯一——核心不解释节内容，
+	// 编译型插件经 Host.Config 自取同名节，无同名编译插件的节由声明型
+	// 插件构造器接管（见 plugins.go 的 InitPlugins）。
+	PluginSections map[string]*yaml.Node
 }
 
 func defaultConfig() Config {
@@ -97,7 +107,28 @@ func LoadConfig(path string) (Runtime, error) {
 	if err := yaml.Unmarshal(raw, &cfg); err != nil {
 		return Runtime{}, fmt.Errorf("解析配置 %s: %w", path, err)
 	}
-	return ValidateConfig(cfg)
+	rt, err := ValidateConfig(cfg)
+	if err != nil {
+		return rt, err
+	}
+	// 插件命名空间节：单一装载路径——核心不解释内容，只按名字分派。
+	var doc yaml.Node
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		return rt, fmt.Errorf("解析配置 %s: %w", path, err)
+	}
+	if len(doc.Content) > 0 {
+		for i := 0; i+1 < len(doc.Content[0].Content); i += 2 {
+			key := doc.Content[0].Content[i].Value
+			if reservedConfigKeys[key] {
+				continue
+			}
+			if rt.PluginSections == nil {
+				rt.PluginSections = map[string]*yaml.Node{}
+			}
+			rt.PluginSections[key] = doc.Content[0].Content[i+1]
+		}
+	}
+	return rt, nil
 }
 
 func ValidateConfig(cfg Config) (Runtime, error) {

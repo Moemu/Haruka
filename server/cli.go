@@ -152,10 +152,13 @@ func cliServe(args []string) error {
 		log.Info("方案 A 位置解析已启用", "db", rt.Cfg.LocationLookupDB)
 	}
 	engine := NewEngine(&rt, db, resolver, log)
+	if err := engine.InitPlugins(); err != nil {
+		return err
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go engine.RunRetention(ctx)
-	go engine.RunWakaTime(ctx)
+	engine.RunPlugins(ctx)
 
 	srv := &http.Server{
 		Addr:              rt.Listen,

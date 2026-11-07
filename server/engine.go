@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"haruka/internal/host"
 	"haruka/protocol"
 )
 
@@ -31,6 +32,8 @@ type LocationResolver interface {
 }
 
 // Engine 是服务端核心：写入规则（ingest）、控制操作与聚合快照共用一个实例。
+// 核心只认识 internal/host 定义的插件系统（plugins 里的对象一律是
+// host.Plugin），不认识任何具体插件。
 type Engine struct {
 	rt       *Runtime
 	db       *sql.DB
@@ -40,6 +43,9 @@ type Engine struct {
 	now func() time.Time
 
 	log *slog.Logger
+
+	plugins       []host.Plugin
+	eventHandlers []host.EventHandler // 构造后收集，ingest 事务内派发
 }
 
 func NewEngine(rt *Runtime, db *sql.DB, resolver LocationResolver, log *slog.Logger) *Engine {

@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"haruka/internal/host"
 	"haruka/protocol"
 )
 
-// PublicStatus 是 GET /v1/public/status 的响应（设计案 5.4 节）。
+// PublicStatus 是 GET /v1/public/status 的响应基座（设计案 5.4 节）。
+// 插件贡献的顶层节由 SnapshotJSON 合并进来，基座不持有任何插件字段。
 type PublicStatus struct {
 	Visibility  string     `json:"visibility"`
 	HiddenUntil *string    `json:"hidden_until,omitempty"`
@@ -17,9 +19,7 @@ type PublicStatus struct {
 	Presence    *PresenceV `json:"presence"`
 	Location    *LocationV `json:"location"`
 	Activity    *ActivityV `json:"activity"`
-	Mood        *MoodV     `json:"mood"`
 	Devices     []DeviceV  `json:"devices,omitempty"`
-	Coding      *CodingV   `json:"coding,omitempty"`
 	GeneratedAt string     `json:"generated_at"`
 }
 
@@ -42,13 +42,6 @@ type ActivityV struct {
 	AsOf    string `json:"as_of"`
 }
 
-type MoodV struct {
-	Mood string `json:"mood"`
-	Text string `json:"text,omitempty"`
-	// Until 为空表示无限期（until 缺席的手动状态，接管时长不确定）。
-	Until string `json:"until,omitempty"`
-}
-
 // DeviceV 是一台在线设备的自述状态；Battery 为空表示该设备没有上报电量
 // （台式机不发 device 事件）。Name 是登记时指定的设备名。
 type DeviceV struct {
@@ -64,18 +57,63 @@ type BatteryV struct {
 }
 
 // Snapshot 读时重算过期（设计案 7.1 节）：内存与缓存只是加速，
-// 权威态在表里，服务器重启后首次读取同样正确。
+// 权威态在表里，服务器重启后首次读取同样正确。返回基座（不含插件节）；
+// 含插件合并的完整响应走 SnapshotJSON。
 func (e *Engine) Snapshot() (*PublicStatus, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	now := e.now()
+	tx, err := e.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	return e.snapshotTx(tx, e.now())
+}
 
+// SnapshotJSON 组装公开快照最终形态：基座 + 各启用 Contributor 的顶层节。
+// 贡献出错记日志跳过——单个插件故障不得拖垮整页。
+func (e *Engine) SnapshotJSON() ([]byte, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	now := e.now()
 	tx, err := e.db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
+	base, err := e.snapshotTx(tx, now)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := json.Marshal(base)
+	if err != nil {
+		return nil, err
+	}
+	merged := map[string]json.RawMessage{}
+	if err := json.Unmarshal(raw, &merged); err != nil {
+		return nil, err
+	}
+	for _, p := range e.plugins {
+		c, ok := p.(host.Contributor)
+		if !ok || !p.Enabled() {
+			continue
+		}
+		sec, err := c.ContributeSnapshot(tx, now)
+		if err != nil {
+			e.log.Warn("插件快照贡献失败，本拍跳过", "plugin", p.Name(), "error", err)
+			continue
+		}
+		if sec == nil {
+			continue
+		}
+		merged[c.SnapshotKey()] = sec
+	}
+	return json.Marshal(merged)
+}
+
+// snapshotTx 在一个读事务内重算基座快照；由 Snapshot 与 SnapshotJSON 共用。
+func (e *Engine) snapshotTx(tx *sql.Tx, now time.Time) (*PublicStatus, error) {
 	hidden, hiddenUntil, err := e.visibility(tx)
 	if err != nil {
 		return nil, err
@@ -309,43 +347,6 @@ func (e *Engine) Snapshot() (*PublicStatus, error) {
 		devStatuses = append(devStatuses, sv)
 	}
 	out.Devices = devStatuses
-
-	// coding：WakaTime 轮询结果，server_state 单条。as_of 超过一天说明轮询
-	// 长期失败，今日口径失真（昨天的余数），此时只保留仍然真实的累计。
-	if v, ok, err := stateGetRow(tx, wakatimeStateKey); err != nil {
-		return nil, err
-	} else if ok {
-		var cv CodingV
-		if json.Unmarshal([]byte(v), &cv) == nil && (cv.TotalSeconds > 0 || (cv.TodaySeconds != nil && *cv.TodaySeconds > 0)) {
-			if asOf, err := parseTime(cv.AsOf); err != nil || now.Sub(asOf) > wakatimeFreshCutoff {
-				cv.TodaySeconds = nil
-			}
-			out.Coding = &cv
-		}
-	}
-
-	// manual：全局单条，未清除且未过期；until 为 NULL 表示无限期。
-	var updatedTS, data sql.NullString
-	var cleared bool
-	var until sql.NullString
-	err = tx.QueryRow(`SELECT updated_ts, cleared, data, until FROM manual_state WHERE id = 1`).
-		Scan(&updatedTS, &cleared, &data, &until)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-	if !cleared && data.Valid {
-		if !until.Valid {
-			var md protocol.ManualData
-			if json.Unmarshal([]byte(data.String), &md) == nil {
-				out.Mood = &MoodV{Mood: md.Mood, Text: md.Text}
-			}
-		} else if u, err := parseTime(until.String); err == nil && u.After(now) {
-			var md protocol.ManualData
-			if json.Unmarshal([]byte(data.String), &md) == nil {
-				out.Mood = &MoodV{Mood: md.Mood, Text: md.Text, Until: formatTime(u)}
-			}
-		}
-	}
 	return out, nil
 }
 

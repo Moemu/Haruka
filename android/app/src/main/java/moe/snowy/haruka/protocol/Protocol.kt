@@ -24,8 +24,12 @@ const val TYPE_HEARTBEAT = "heartbeat"
 const val TYPE_PRESENCE = "presence"
 const val TYPE_ACTIVITY = "activity"
 const val TYPE_LOCATION = "location"
-const val TYPE_MANUAL = "manual"
+const val TYPE_CUSTOM = "custom"
 const val TYPE_DEVICE = "device"
+
+/** 插件 source（身份规则与插件名统一：[a-z0-9_-]{1,32}）。 */
+const val SOURCE_MOOD = "mood"
+const val SOURCE_PERSONA = "persona"
 
 const val STATE_ACTIVE = "active"
 const val STATE_AWAY = "away"
@@ -78,12 +82,14 @@ data class LocationData(
     @SerialName("zone") val zone: String? = null,
 )
 
+/**
+ * 插件数据信封（契约源 protocol/events.go CustomData）：核心只验信封
+ * （source 形态、payload 为 ≤2KB JSON 对象），语义归订阅同名 source 的插件。
+ */
 @Serializable
-data class ManualData(
-    @SerialName("mood") val mood: String? = null,
-    @SerialName("text") val text: String? = null,
-    @SerialName("until") val until: String? = null,
-    @SerialName("clear") val clear: Boolean = false,
+data class CustomData(
+    @SerialName("source") val source: String,
+    @SerialName("payload") val payload: JsonObject,
 )
 
 /** activity 负载（契约源 protocol/events.go）：kind 必填，app/category 省略即空。 */
@@ -105,7 +111,7 @@ data class DeviceData(
 @Serializable
 object HeartbeatData
 
-/** 手动状态种子词表，新增词由发布动作自动入表（settings 持久化）。 */
+/** 情绪固定种子词表（mood 插件封闭集，与服务端 Labels 同源；通用情绪不可配置）。 */
 val VALID_MOODS = listOf("happy", "focused", "tired", "anxious", "chilling", "sick")
 
 object Wire {
@@ -153,11 +159,32 @@ object Wire {
     fun deviceEvent(seq: Long, nowMs: Long, data: DeviceData) =
         event(TYPE_DEVICE, seq, nowMs, json.encodeToJsonElement(DeviceData.serializer(), data))
 
-    fun manualEvent(seq: Long, nowMs: Long, data: ManualData) =
-        event(TYPE_MANUAL, seq, nowMs, json.encodeToJsonElement(ManualData.serializer(), data))
+    fun customEvent(seq: Long, nowMs: Long, data: CustomData) =
+        event(TYPE_CUSTOM, seq, nowMs, json.encodeToJsonElement(CustomData.serializer(), data))
 
     private fun HeartbeatData.json(): JsonObject = buildJsonObject { }
 }
+
+// ---- 内置插件的 payload 构造器（契约源 internal/plugins/{mood,persona}，Android 镜像） ----
+
+/** mood 插件 payload：限时情绪（untilMs=null 表示无限期… 情绪场景用四档，0/无值即不带 until）+ 附言。 */
+fun moodPayload(mood: String, text: String?, untilMs: Long?): JsonObject = buildJsonObject {
+    put("mood", mood)
+    if (!text.isNullOrBlank()) put("text", text)
+    if (untilMs != null && untilMs > 0L) put("until", Wire.rfc3339(untilMs))
+}
+
+/** mood 清除 payload。 */
+fun moodClearPayload(): JsonObject = buildJsonObject { put("clear", true) }
+
+/** persona 插件 payload：从服务端封闭列表选择的人格 + 可选附言；无 until（无限期接管）。 */
+fun personaPayload(persona: String, text: String?): JsonObject = buildJsonObject {
+    put("persona", persona)
+    if (!text.isNullOrBlank()) put("text", text)
+}
+
+/** persona 清除 payload（回落服务端默认人格）。 */
+fun personaClearPayload(): JsonObject = buildJsonObject { put("clear", true) }
 
 /**
  * presence 亮屏启发式（spec §6.1 定稿）：亮屏、未锁屏、且距最近亮屏/解锁不超过

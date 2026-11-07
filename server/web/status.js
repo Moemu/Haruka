@@ -8,6 +8,7 @@
   var LOCATION_STALE_MS = 1800000; // 位置观测超过 30 分钟 → 标注「有点旧了」
 
   var src = document.body.dataset.statusSrc || "/v1/public/status";
+  var CAPS_SRC = "/v1/capabilities";
 
   var $ = function (id) { return document.getElementById(id); };
   var els = {
@@ -18,11 +19,7 @@
     activityAsof: $("activity-asof"),
     locationText: $("location-text"),
     locationAsof: $("location-asof"),
-    moodText: $("mood-text"),
-    moodAsof: $("mood-asof"),
-    cardCoding: $("card-coding"),
-    codingText: $("coding-text"),
-    codingAsof: $("coding-asof"),
+    pluginCards: $("plugin-cards"),
     cardDevices: $("card-devices"),
     devicesList: $("devices-list"),
     footerSync: $("footer-sync"),
@@ -35,6 +32,8 @@
 
   var lastSnap = null;
   var timer = null;
+  var manifest = [];   // capabilities.plugins：插件卡清单（端口 3）
+  var pluginRefs = {}; // name -> { card, body, subs[], asof }
 
   function rel(iso) {
     var t = Date.parse(iso);
@@ -67,16 +66,6 @@
   // presence 词即文案：大字直接展示，meta 负责时间语境。
   var STATE_WORD = { active: "在线", away: "离开", unknown: "状态未知", offline: "离线" };
 
-  // mood 是协议封闭枚举（ingest 白名单），展示层映射为中文；未知值原样展示，不猜。
-  var MOOD_LABEL = {
-    happy: "开心",
-    focused: "专注",
-    tired: "累了",
-    anxious: "有点慌",
-    chilling: "放松中",
-    sick: "不舒服",
-  };
-
   var DEVICE_LABEL = { desktop: "电脑", android: "手机" };
   var SVGNS = "http://www.w3.org/2000/svg";
   var RING_C = 2 * Math.PI * 26; // 电量环周长（viewBox 64, r=26）
@@ -100,6 +89,27 @@
     android: [
       ["rect", { x: 7, y: 2.5, width: 10, height: 19, rx: 2.5 }],
       ["path", { d: "M11 18.5h2" }],
+    ],
+  };
+
+  // 插件卡图标表（清单 icon 字段 → 线性形）；未知名回退中性圆点。
+  var PLUGIN_ICON = {
+    mood: [
+      ["circle", { cx: 12, cy: 12, r: 9 }],
+      ["path", { d: "M8.5 13.5a5 5 0 0 0 7 0" }],
+      ["path", { d: "M9 9.5h.01M15 9.5h.01" }],
+    ],
+    persona: [
+      ["circle", { cx: 12, cy: 8, r: 4 }],
+      ["path", { d: "M4 21c0-4.2 3.6-6.5 8-6.5s8 2.3 8 6.5" }],
+    ],
+    coding: [
+      ["path", { d: "m8 7-5 5 5 5" }],
+      ["path", { d: "m16 7 5 5-5 5" }],
+    ],
+    reading: [
+      ["path", { d: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20" }],
+      ["path", { d: "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" }],
     ],
   };
 
@@ -217,31 +227,9 @@
       setField(els.locationText, els.locationAsof, "位置未公开", "", false);
     }
 
-    if (snap.mood) {
-      var moodWord = snap.mood.mood || "";
-      var moodLabel = MOOD_LABEL[moodWord] || moodWord;
-      var moodText = [moodLabel, snap.mood.text].filter(Boolean).join(" — ");
-      setField(els.moodText, els.moodAsof, moodText || "一切如常", snap.mood.until ? "至 " + clock(snap.mood.until) + " 有效" : "", false);
-    } else {
-      setField(els.moodText, els.moodAsof, "一切如常", "", false);
-    }
-
-    // 编码时长：WakaTime 服务端轮询值（编辑器活动口径）。today_seconds
-    // 缺席表示数据过旧（服务端守卫），只展示仍然真实的累计；为 0 表示
-    // 当天确实还没写。
-    if (snap.coding && (snap.coding.total_seconds > 0 || snap.coding.today_seconds > 0)) {
-      var cv = snap.coding;
-      if (cv.today_seconds != null) {
-        els.codingText.textContent = cv.today_seconds > 0 ? dur(cv.today_seconds) : "今天还没写代码";
-        els.codingAsof.textContent = cv.total_seconds > 0 ? "累计 " + durTotal(cv.total_seconds) : "";
-      } else {
-        els.codingText.textContent = "累计 " + durTotal(cv.total_seconds);
-        els.codingAsof.textContent = "";
-      }
-      els.cardCoding.hidden = false;
-    } else {
-      els.cardCoding.hidden = true;
-    }
+    // 插件卡：清单驱动通用渲染——卡片只由自身插件的数据决定，
+    // 节缺席即不出卡，插件之间零感知（设计案 §7.7）。
+    renderPlugins(snap);
 
     // 设备状态：只列出上报了电量数据的在线设备；全部缺席时整卡隐藏。
     while (els.devicesList.firstChild) { els.devicesList.removeChild(els.devicesList.firstChild); }
@@ -256,8 +244,106 @@
     mode("normal");
   }
 
-  function renderError(kind, snap) {
-    if (kind === "loading") {
+  // --- 插件卡：清单驱动通用渲染（状态页端口） ---
+
+  // 定制渲染钩子：特殊视觉的插件在此按名字注册（缺省走通用渲染）。
+  var CARD_RENDERERS = {};
+
+  function chipSvg(iconName) {
+    var chip = document.createElement("span");
+    chip.className = "chip";
+    chip.setAttribute("aria-hidden", "true");
+    var svg = svgEl("svg", { viewBox: "0 0 24 24" });
+    (PLUGIN_ICON[iconName] || [["circle", { cx: 12, cy: 12, r: 9 }]]).forEach(function (shape) {
+      svg.appendChild(svgEl(shape[0], shape[1]));
+    });
+    chip.appendChild(svg);
+    return chip;
+  }
+
+  // buildPluginCards 依据清单构建卡片 DOM（每插件一张，缺数据 hidden）。
+  function buildPluginCards() {
+    while (els.pluginCards.firstChild) { els.pluginCards.removeChild(els.pluginCards.firstChild); }
+    pluginRefs = {};
+    manifest.forEach(function (p) {
+      var card = document.createElement("article");
+      card.className = "card";
+      card.hidden = true;
+
+      var h2 = document.createElement("h2");
+      h2.appendChild(chipSvg(p.icon));
+      h2.appendChild(document.createTextNode(p.title || p.name));
+      card.appendChild(h2);
+
+      var refs = { card: card, body: null, subs: [], asof: null };
+      (p.fields || []).forEach(function (f, i) {
+        if (i === 0) {
+          refs.body = document.createElement("p");
+          refs.body.className = "card-body";
+          refs.body.textContent = "…";
+          card.appendChild(refs.body);
+        } else {
+          var sub = document.createElement("p");
+          sub.className = "card-sub";
+          card.appendChild(sub);
+          refs.subs.push(sub);
+        }
+      });
+      refs.asof = document.createElement("p");
+      refs.asof.className = "card-asof";
+      card.appendChild(refs.asof);
+
+      els.pluginCards.appendChild(card);
+      pluginRefs[p.name] = refs;
+    });
+  }
+
+  // 字段值格式化：labels 映射优先，随后按 format 口径。
+  function formatValue(f, v) {
+    if (v == null) { return ""; }
+    if (f.labels && f.labels[v]) { return f.labels[v]; }
+    switch (f.format) {
+      case "duration": return dur(Number(v));
+      case "duration_total": return durTotal(Number(v));
+      case "time": return clock(v);
+      case "number": return Number(v).toLocaleString("zh-CN");
+      default: return String(v);
+    }
+  }
+
+  function renderPlugins(snap) {
+    manifest.forEach(function (p) {
+      var refs = pluginRefs[p.name];
+      if (!refs) { return; }
+      var sec = snap[p.name];
+      if (!sec) { refs.card.hidden = true; return; }
+      refs.card.hidden = false;
+      if (CARD_RENDERERS[p.name]) { CARD_RENDERERS[p.name](sec, refs); return; }
+      (p.fields || []).forEach(function (f, i) {
+        var text = formatValue(f, sec[f.key]);
+        if (i === 0) {
+          refs.body.textContent = text || "—";
+        } else {
+          refs.subs[i - 1].textContent = f.label ? f.label + "：" + text : text;
+        }
+      });
+      refs.asof.textContent = sec.as_of ? rel(sec.as_of) : "";
+    });
+  }
+
+  // loadManifest 拉插件清单（页面装载一次；失败 = 无插件卡，核心卡照常）。
+  function loadManifest() {
+    return fetch(CAPS_SRC, { headers: { Accept: "application/json" } })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (cap) {
+        manifest = (cap && cap.plugins) || [];
+        buildPluginCards();
+        if (lastSnap) { render(lastSnap); }
+      })
+      .catch(function () { manifest = []; });
+  }
+
+  function renderError(kind, snap) {    if (kind === "loading") {
       els.errorTitle.textContent = "正在连接…";
       els.errorBody.textContent = "正在获取最新状态。";
       els.errorMeta.textContent = "";
@@ -306,5 +392,6 @@
 
   markToday();
   renderError("loading");
+  loadManifest();
   start();
 })();

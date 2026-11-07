@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "device_id": "d_a1b2c3",
+  "device_kind": "android",
+  "sent_at": "2026-10-03T14:00:00Z",
+  "events": [
+    {
+      "id": "e_5f1e2d3c4b5a69788796a5b4c3d2e1f1",
+      "seq": 912,
+      "ts": "2026-10-03T13:59:45Z",
+      "type": "custom",
+      "data": { "source": "persona", "payload": { "persona": "真冬" } }
+    }
+  ]
+}

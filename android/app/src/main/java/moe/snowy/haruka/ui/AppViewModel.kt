@@ -16,8 +16,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
 import moe.snowy.haruka.HarukaApp
 import moe.snowy.haruka.R
 import moe.snowy.haruka.data.EventRow
@@ -26,9 +28,15 @@ import moe.snowy.haruka.data.LOCATION_LOCAL
 import moe.snowy.haruka.net.HttpResult
 import moe.snowy.haruka.net.PublicSnapshot
 import moe.snowy.haruka.net.normalizeBaseUrl
-import moe.snowy.haruka.protocol.ManualData
-import moe.snowy.haruka.protocol.TYPE_MANUAL
+import moe.snowy.haruka.protocol.CustomData
+import moe.snowy.haruka.protocol.SOURCE_MOOD
+import moe.snowy.haruka.protocol.SOURCE_PERSONA
+import moe.snowy.haruka.protocol.TYPE_CUSTOM
 import moe.snowy.haruka.protocol.Wire
+import moe.snowy.haruka.protocol.moodClearPayload
+import moe.snowy.haruka.protocol.moodPayload
+import moe.snowy.haruka.protocol.personaClearPayload
+import moe.snowy.haruka.protocol.personaPayload
 import moe.snowy.haruka.sync.HeartbeatService
 import moe.snowy.haruka.sync.LocationService
 import moe.snowy.haruka.sync.ServiceRuntime
@@ -203,49 +211,84 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { c.settings.setActivityEnabled(enabled) }
     }
 
-    // ---- 手动状态 ----
+    // ---- 情绪 / 人格（custom 插件事件） ----
 
-    /** untilMs 为 0 表示无限期（人格接管时长不确定），事件不带 until。 */
-    fun publishManual(mood: String, text: String, untilMs: Long) {
+    /** untilMs 为 0 表示无限期（「长期」档），payload 不带 until。 */
+    fun publishMood(mood: String, text: String, untilMs: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            val trimmed = text.trim()
-            val data = ManualData(
-                mood = mood.ifBlank { null },
-                text = trimmed.ifBlank { null },
-                until = if (untilMs == 0L) null else Wire.rfc3339(untilMs),
+            publishCustom(
+                source = SOURCE_MOOD,
+                payload = moodPayload(mood, text.trim().ifBlank { null }, if (untilMs == 0L) null else untilMs),
             )
-            val now = System.currentTimeMillis()
-            val ev = Wire.manualEvent(c.spool.nextSeq(), now, data)
-            c.spool.enqueue(
-                EventRow(
-                    id = ev.id, seq = ev.seq, ts = ev.ts, type = TYPE_MANUAL,
-                    data = Wire.json.encodeToString(ManualData.serializer(), data),
-                ),
-            )
-            c.settings.setManual(mood, trimmed, untilMs)
-            c.settings.addManualMood(mood)
-            val synced = c.syncNowIfIdle()
-            _message.value = if (synced) appContext.getString(R.string.manual_published)
-            else appContext.getString(R.string.manual_saved_offline)
-
+            c.settings.setManual(mood, text.trim(), untilMs)
+            finishManualFlow(syncedMessageOk = R.string.manual_published)
         }
     }
 
-    fun clearManual() {
+    fun clearMood() {
         viewModelScope.launch(Dispatchers.IO) {
-            val now = System.currentTimeMillis()
-            val data = ManualData(clear = true)
-            val ev = Wire.manualEvent(c.spool.nextSeq(), now, data)
-            c.spool.enqueue(
-                EventRow(
-                    id = ev.id, seq = ev.seq, ts = ev.ts, type = TYPE_MANUAL,
-                    data = Wire.json.encodeToString(ManualData.serializer(), data),
-                ),
-            )
+            publishCustom(SOURCE_MOOD, moodClearPayload())
             c.settings.setManualCleared()
-            val synced = c.syncNowIfIdle()
-            _message.value = if (synced) "已清除" else appContext.getString(R.string.manual_saved_offline)
+            finishManualFlow(syncedMessageOk = null)
+        }
+    }
 
+    /** 人格切换：persona 必须来自服务端封闭列表（choices），无限期接管。 */
+    fun publishPersona(persona: String, text: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            publishCustom(SOURCE_PERSONA, personaPayload(persona, text.trim().ifBlank { null }))
+            c.settings.setPersona(persona, text.trim())
+            finishManualFlow(syncedMessageOk = R.string.manual_published)
+        }
+    }
+
+    fun clearPersona() {
+        viewModelScope.launch(Dispatchers.IO) {
+            publishCustom(SOURCE_PERSONA, personaClearPayload())
+            c.settings.setPersonaCleared()
+            finishManualFlow(syncedMessageOk = null)
+        }
+    }
+
+    private suspend fun publishCustom(source: String, payload: JsonObject) {
+        val now = System.currentTimeMillis()
+        val data = CustomData(source = source, payload = payload)
+        val ev = Wire.customEvent(c.spool.nextSeq(), now, data)
+        c.spool.enqueue(
+            EventRow(
+                id = ev.id, seq = ev.seq, ts = ev.ts, type = TYPE_CUSTOM,
+                data = Wire.json.encodeToString(CustomData.serializer(), data),
+            ),
+        )
+    }
+
+    private suspend fun finishManualFlow(syncedMessageOk: Int?) {
+        val synced = c.syncNowIfIdle()
+        _message.value = when {
+            synced && syncedMessageOk != null -> appContext.getString(syncedMessageOk)
+            synced -> "已清除"
+            else -> appContext.getString(R.string.manual_saved_offline)
+        }
+    }
+
+    // ---- 插件能力发现（persona choices 等私有槽位） ----
+
+    private val _personaChoices = MutableStateFlow<List<String>>(emptyList())
+    val personaChoices: StateFlow<List<String>> = _personaChoices.asStateFlow()
+
+    /** 拉取插件清单取 persona choices（服务端封闭人格列表）；失败保留旧值。 */
+    fun loadPersonaChoices() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val s = c.settings.current()
+            if (!s.configured) return@launch
+            when (val res = c.api.capabilities(s.baseUrl, s.deviceToken)) {
+                is HttpResult.Ok -> {
+                    val caps = c.api.parseCapabilities(res.body) ?: return@launch
+                    _personaChoices.value = caps.plugins
+                        .firstOrNull { it.name == SOURCE_PERSONA }?.choices.orEmpty()
+                }
+                else -> Unit // 网络/服务端旧版：保留既有 choices，UI 回退提示
+            }
         }
     }
 

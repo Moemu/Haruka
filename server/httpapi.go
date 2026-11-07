@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+	"haruka/internal/host"
 )
 
 // 状态页静态资源随二进制分发（设计案 §10：独立页由 GET /status 提供）。
@@ -49,6 +50,7 @@ func (e *Engine) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/device-policy", e.handleDevicePolicy)
 	mux.HandleFunc("POST /v1/device-capability", e.handleDeviceCapability)
 	mux.HandleFunc("GET /v1/public/status", e.handlePublicStatus)
+	mux.HandleFunc("GET /v1/capabilities", e.handleCapabilities)
 	mux.HandleFunc("GET /v1/whoami-ip", e.handleWhoamiIP)
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/status", http.StatusFound) })
 	mux.HandleFunc("GET /status", func(w http.ResponseWriter, r *http.Request) { e.serveWeb(w, r, "status.html") })
@@ -257,6 +259,11 @@ func (e *Engine) handleIngest(w http.ResponseWriter, r *http.Request) {
 			httpError(w, http.StatusForbidden, "device_id 与令牌登记不符")
 			return
 		}
+		if errors.Is(err, errValidation) {
+			// 插件 payload 校验等事务内拒收：可读错误反馈到端（400）。
+			httpError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		httpError(w, http.StatusInternalServerError, "处理失败")
 		e.log.Error("ingest 处理失败", "device", device.ID, "error", err)
 		return
@@ -411,25 +418,25 @@ func (e *Engine) authOwner(r *http.Request) bool {
 }
 
 func (e *Engine) handlePublicStatus(w http.ResponseWriter, r *http.Request) {
-	snap, err := e.Snapshot()
+	body, err := e.SnapshotJSON()
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, "快照生成失败")
 		e.log.Error("快照生成失败", "error", err)
 		return
 	}
-	body, err := json.Marshal(snap)
-	if err != nil {
-		httpError(w, http.StatusInternalServerError, "序列化失败")
-		return
-	}
+	writeSnapshotBody(w, r, body, e.corsOrigin(r))
+}
+
+// writeSnapshotBody 输出带 ETag 的快照/清单响应（no-cache 逐次重验证，
+// 敏感状态变化不被缓存放大，设计案 6.4 节）。
+func writeSnapshotBody(w http.ResponseWriter, r *http.Request, body []byte, cors string) {
 	sum := sha256.Sum256(body)
 	etag := `"` + hex.EncodeToString(sum[:8]) + `"`
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	// no-cache + ETag：允许缓存但逐次重验证，敏感状态变化不被缓存放大（设计案 6.4 节）。
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("ETag", etag)
-	if e.corsOrigin(r) != "" {
-		w.Header().Set("Access-Control-Allow-Origin", e.corsOrigin(r))
+	if cors != "" {
+		w.Header().Set("Access-Control-Allow-Origin", cors)
 		w.Header().Set("Vary", "Origin")
 	}
 	if r.Header.Get("If-None-Match") == etag {
@@ -438,6 +445,45 @@ func (e *Engine) handlePublicStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
+}
+
+// capabilitiesPlugin 是清单里单个插件的形态：身份 + Descriptor（公开字段
+// 平铺；私有槽位仅令牌请求可见）。
+type capabilitiesPlugin struct {
+	Name string `json:"name"`
+	host.Descriptor
+}
+
+// handleCapabilities 输出插件清单（端口 3）：公开档 = 展示元数据（状态页
+// 渲染所需最少信息）；携带设备/owner 令牌时附加 choices/settings 私有槽位
+// ——人格名单等配置面不进公开响应。
+func (e *Engine) handleCapabilities(w http.ResponseWriter, r *http.Request) {
+	_, deviceOK := e.authDeviceQuiet(r)
+	authed := e.authOwner(r) || deviceOK
+	plugins := make([]capabilitiesPlugin, 0, len(e.plugins))
+	for _, p := range e.plugins {
+		if !p.Enabled() {
+			continue
+		}
+		cp := capabilitiesPlugin{Name: p.Name()}
+		if d, ok := p.(host.Describer); ok {
+			cp.Descriptor = d.Describe()
+		}
+		if !authed {
+			cp.Descriptor.Choices = nil
+			cp.Descriptor.Settings = nil
+		}
+		plugins = append(plugins, cp)
+	}
+	body, err := json.Marshal(struct {
+		GeneratedAt string               `json:"generated_at"`
+		Plugins     []capabilitiesPlugin `json:"plugins"`
+	}{formatTime(e.now()), plugins})
+	if err != nil {
+		httpError(w, http.StatusInternalServerError, "序列化失败")
+		return
+	}
+	writeSnapshotBody(w, r, body, e.corsOrigin(r))
 }
 
 func (e *Engine) corsOrigin(r *http.Request) string {

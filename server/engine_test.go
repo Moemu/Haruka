@@ -10,8 +10,20 @@ import (
 	"testing"
 	"time"
 
+	"haruka/internal/host"
 	"haruka/protocol"
+
+	"gopkg.in/yaml.v3"
 )
+
+// initTestPlugins 注入配置节并执行插件装载（供走完整插件链路的测试用）。
+func initTestPlugins(t *testing.T, te *testEnv, sections map[string]*yaml.Node) {
+	t.Helper()
+	te.e.rt.PluginSections = sections
+	if err := te.e.InitPlugins(); err != nil {
+		t.Fatalf("InitPlugins: %v", err)
+	}
+}
 
 func discardLoggerS() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -268,60 +280,56 @@ func TestAssertion4MultiDeviceAggregation(t *testing.T) {
 	}
 }
 
-// 断言 5：manual 排序与防复活。
-func TestAssertion5ManualOrderingAndTombstone(t *testing.T) {
-	te := newTestEnv(t, nil)
-	phone := te.addDevice(t, protocol.KindAndroid, 10*time.Minute)
-	te.heartbeat(t, phone)
+// 断言 5：custom 插件事件——通用观测入库、事务内派发、隐私/时钟护栏、拒收。
+// 接管态语义（排序/墓碑/过期）归插件自身测试（internal/plugins/mood 等）。
+type fakeMoodHandler struct{ got []host.Delivered }
 
-	// 离线 20 分钟的设置事件（超出新鲜度窗口）仍必须发布——manual 是用户操作。
-	setTS := te.now.Add(-20 * time.Minute)
-	te.emit(t, phone, protocol.TypeManual, setTS, protocol.ManualData{Mood: "focused", Text: "赶 deadline 中"})
-	if snap := te.snapshot(t); snap.Mood == nil || snap.Mood.Mood != "focused" {
-		t.Fatalf("离线设置应正常发布: %+v", snap.Mood)
-	}
+func (f *fakeMoodHandler) Sources() []string { return []string{"mood"} }
 
-	// 一小时后清除（另一设备或本机）。
-	te.now = te.now.Add(time.Hour)
-	clearDev := te.addDevice(t, protocol.KindDesktop, 10*time.Minute)
-	te.heartbeat(t, clearDev)
-	te.emit(t, clearDev, protocol.TypeManual, te.now, protocol.ManualData{Clear: true})
-	if snap := te.snapshot(t); snap.Mood != nil {
-		t.Fatalf("清除后 mood 应消失: %+v", snap.Mood)
-	}
-
-	// 手机重放 30 分钟前的旧设置：ts ≤ cleared_ts，不得复活。
-	te.emit(t, phone, protocol.TypeManual, te.now.Add(-30*time.Minute),
-		protocol.ManualData{Mood: "chilling"})
-	if snap := te.snapshot(t); snap.Mood != nil {
-		t.Fatalf("清除墓碑之后的旧设置不得复活: %+v", snap.Mood)
-	}
-
-	// 墓碑之后的新设置正常生效。
-	te.emit(t, phone, protocol.TypeManual, te.now.Add(time.Minute), protocol.ManualData{Mood: "tired"})
-	if snap := te.snapshot(t); snap.Mood == nil || snap.Mood.Mood != "tired" {
-		t.Fatalf("墓碑后的新设置应生效: %+v", snap.Mood)
-	}
+func (f *fakeMoodHandler) HandleEvent(ev host.Delivered, q host.Queryer) error {
+	f.got = append(f.got, ev)
+	return nil
 }
 
-// until 缺席的手动状态无限期生效：推进时钟也不过期，快照中 until 缺席。
-func TestManualWithoutUntilIsIndefinite(t *testing.T) {
+func TestAssertion5CustomDispatchAndObservation(t *testing.T) {
 	te := newTestEnv(t, nil)
 	phone := te.addDevice(t, protocol.KindAndroid, 10*time.Minute)
 	te.heartbeat(t, phone)
+	h := &fakeMoodHandler{}
+	te.e.eventHandlers = []host.EventHandler{h}
 
-	te.emit(t, phone, protocol.TypeManual, te.now, protocol.ManualData{Mood: "真冬"})
-	te.now = te.now.Add(5 * time.Hour)
-	snap := te.snapshot(t)
-	if snap.Mood == nil || snap.Mood.Mood != "真冬" || snap.Mood.Until != "" {
-		t.Fatalf("until 缺席应无限期生效: %+v", snap.Mood)
+	// 离线 20 分钟的自定义事件（超出新鲜度窗口）：通用观测不入实时态，
+	// 但用户操作类派发照常（与原 manual 一致——派发只受隐私边界约束）。
+	te.emit(t, phone, protocol.TypeCustom, te.now.Add(-20*time.Minute),
+		protocol.CustomData{Source: "mood", Payload: json.RawMessage(`{"mood":"focused"}`)})
+	if len(h.got) != 1 || h.got[0].Source != "mood" || string(h.got[0].Payload) != `{"mood":"focused"}` {
+		t.Fatalf("custom 事件应派发给订阅插件: %+v", h.got)
+	}
+	var n int
+	if err := te.e.db.QueryRow(`SELECT count(*) FROM current_state WHERE device_id = ? AND type = 'custom:mood'`, phone.ID).Scan(&n); err != nil || n != 0 {
+		t.Fatalf("超出新鲜度窗口的观测不得入实时态: n=%d err=%v", n, err)
 	}
 
-	// 带期限的设置覆盖后照旧过期。
-	te.emit(t, phone, protocol.TypeManual, te.now, protocol.ManualData{Mood: "tired", Until: formatTime(te.now.Add(time.Hour))})
-	te.now = te.now.Add(2 * time.Hour)
-	if snap := te.snapshot(t); snap.Mood != nil {
-		t.Fatalf("带期限状态过期后应消失: %+v", snap.Mood)
+	// 新鲜事件：观测入库。
+	te.emit(t, phone, protocol.TypeCustom, te.now,
+		protocol.CustomData{Source: "mood", Payload: json.RawMessage(`{"mood":"tired"}`)})
+	if err := te.e.db.QueryRow(`SELECT count(*) FROM current_state WHERE device_id = ? AND type = 'custom:mood'`, phone.ID).Scan(&n); err != nil || n != 1 {
+		t.Fatalf("新鲜 custom 观测应入实时态: n=%d err=%v", n, err)
+	}
+
+	// 非法 source / 非对象 payload 在信封层拒收。
+	bad := []func(e *protocol.Event){
+		func(e *protocol.Event) { e.Data = json.RawMessage(`{"source":"BAD","payload":{}}`) },
+		func(e *protocol.Event) { e.Data = json.RawMessage(`{"source":"mood","payload":"hi"}`) },
+		func(e *protocol.Event) { e.Data = json.RawMessage(`{"source":"mood","payload":null}`) },
+		func(e *protocol.Event) { e.Data = json.RawMessage(`{"source":"mood"}`) },
+	}
+	for i, mutate := range bad {
+		ev, _ := protocol.NewEvent(protocol.TypeCustom, uint64(i+1), te.now, protocol.CustomData{Source: "mood", Payload: json.RawMessage(`{}`)})
+		mutate(&ev)
+		if err := validateEvent(&ev); err == nil {
+			t.Fatalf("用例 %d 应被信封校验拒收", i)
+		}
 	}
 }
 

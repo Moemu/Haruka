@@ -34,10 +34,37 @@ aggregation:
 # 方案 A 的离线解析库（ip2region.xdb）路径；留空禁用派生。
 location_lookup_db: ""
 
-# WakaTime 数据源：填个人 OAuth token（wakatime.com/oauth 生成）后服务端
-# 每 5 分钟拉取一次官方 API，状态页展示今日与累计编码时长；留空即停用。
+# ---- 插件（设计案 §7.7）：所有插件一律顶层配置节，单一装载路径 ----
+# 三态语义：缺节/enabled:false = 停用；启用但配置无效 = 拒绝启动（绝不静默降级）。
+# 新插件两种来源见 docs/plugin-dev.md：编译型（Go 包）与声明型（本例 reading）。
+
+# mood：固定六词通用情绪 + 附言 + 有效期（custom:mood 事件）。无必填配置，缺节默认启用。
+# mood:
+#   enabled: true
+
+# persona：人格 = 封闭列表（谁在活动），切换长期生效，清除回落默认人格。
+# 缺节停用；启用则 list 必填、default（可选）必须 ∈ list。
+# persona:
+#   enabled: true
+#   list:
+#     - Muika
+#     - 真冬
+#   default: Muika
+
+# 声明型插件：数据 = 同名 custom 事件（来源程序自行推送），声明即元数据，
+# 状态页自动出卡（快照节 = 最新 payload 平铺 + as_of，TTL 30 分钟）。
+# reading:
+#   title: 正在读
+#   fields:
+#     - key: title
+#       label: 书名
+#     - key: author
+
+# WakaTime：拉取型插件，填个人 OAuth token（wakatime.com/oauth 生成）后
+# 每 5 分钟拉取官方 API；缺 token 时启用会拒绝启动。
 # token 只保存在本配置文件里，不会出现在公开接口。
 # wakatime:
+#   enabled: true
 #   token: "waka_tok_xxxxxxxx"
 
 # 日志输出 stdout（Docker 推荐，配合 --log-opt 轮转）；

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	_ "haruka/internal/plugins/mood" // 测试经 init() 注册 mood，走完整插件链路
 	"haruka/protocol"
 )
 
@@ -76,17 +77,13 @@ func TestIngestStrictValidation(t *testing.T) {
 			"type": "activity",
 			"data": map[string]any{"kind": "ide", "app": "IDE", "category": "coding", "window_title": "aurora – main.go"},
 		},
-		"坐标进 text": {
-			"type": "manual",
-			"data": map[string]any{"mood": "focused", "text": "31.19, 121.43"},
+		"坐标进 project": {
+			"type": "activity",
+			"data": map[string]any{"kind": "ide", "app": "IDE", "category": "coding", "project": "31.19, 121.43"},
 		},
 		"路径进 project": {
 			"type": "activity",
 			"data": map[string]any{"kind": "ide", "app": "IDE", "category": "coding", "project": "../etc/passwd"},
-		},
-		"URL 进 text": {
-			"type": "manual",
-			"data": map[string]any{"mood": "focused", "text": "看 https://secret.example.com"},
 		},
 		"precision 不一致": {
 			"type": "location",
@@ -96,13 +93,17 @@ func TestIngestStrictValidation(t *testing.T) {
 			"type": "location",
 			"data": map[string]any{"source": "gps_coarse", "precision": "city", "city": "上海", "latitude": 31.19},
 		},
-		"URL 进 mood": {
-			"type": "manual",
-			"data": map[string]any{"mood": "a/b"},
+		"custom source 非法": {
+			"type": "custom",
+			"data": map[string]any{"source": "Bad Source", "payload": map[string]any{}},
 		},
-		"坐标进 mood": {
-			"type": "manual",
-			"data": map[string]any{"mood": "31.19, 121.43"},
+		"payload 非对象": {
+			"type": "custom",
+			"data": map[string]any{"source": "mood", "payload": "hi"},
+		},
+		"payload 缺席": {
+			"type": "custom",
+			"data": map[string]any{"source": "mood"},
 		},
 		"未知类型": {
 			"type": "health",
@@ -195,7 +196,7 @@ func TestPublicStatusETagAndHidden(t *testing.T) {
 	if err := json.Unmarshal(body3, &hidden); err != nil {
 		t.Fatal(err)
 	}
-	if hidden.Visibility != "hidden" || hidden.Location != nil || hidden.Mood != nil {
+	if hidden.Visibility != "hidden" || hidden.Location != nil {
 		t.Fatalf("隐身快照应只剩 visibility: %+v", hidden)
 	}
 }
@@ -416,6 +417,9 @@ func TestStatusPageServed(t *testing.T) {
 // 上游契约就是这份 JSON——组件归下游实现后，公开内容的边界全靠这里守住。
 func TestPublicResponseNoSensitiveFragments(t *testing.T) {
 	te := newTestEnv(t, nil)
+	if err := te.e.InitPlugins(); err != nil { // mood 插件默认启用（测试经 init() 注册）
+		t.Fatal(err)
+	}
 	dev := te.addDevice(t, protocol.KindDesktop, 10*time.Minute)
 	te.heartbeat(t, dev)
 	te.emit(t, dev, protocol.TypePresence, te.now, protocol.PresenceData{State: "active"})
@@ -423,8 +427,8 @@ func TestPublicResponseNoSensitiveFragments(t *testing.T) {
 		protocol.ActivityData{Kind: "ide", App: "Visual Studio Code", Category: "coding"})
 	te.emit(t, dev, protocol.TypeLocation, te.now,
 		protocol.LocationData{Source: "ip", Precision: "district", Country: "中国", Province: "上海市", City: "上海", District: "徐汇区"})
-	te.emit(t, dev, protocol.TypeManual, te.now,
-		protocol.ManualData{Mood: "😊", Text: "今天也在好好生活", Until: te.now.Add(2 * time.Hour).UTC().Format(time.RFC3339)})
+	te.emit(t, dev, protocol.TypeCustom, te.now,
+		protocol.CustomData{Source: "mood", Payload: json.RawMessage(`{"mood":"😊","text":"今天也在好好生活"}`)})
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/public/status", nil)
 	rec := httptest.NewRecorder()

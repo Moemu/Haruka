@@ -10,6 +10,9 @@ import kotlinx.serialization.json.jsonObject
 import moe.snowy.haruka.protocol.Envelope
 import moe.snowy.haruka.protocol.Wire
 import moe.snowy.haruka.protocol.endOfTodayUtcMs
+import moe.snowy.haruka.protocol.moodClearPayload
+import moe.snowy.haruka.protocol.moodPayload
+import moe.snowy.haruka.protocol.personaPayload
 import moe.snowy.haruka.protocol.presenceSample
 import moe.snowy.haruka.protocol.validateManualMood
 import moe.snowy.haruka.protocol.validateManualText
@@ -30,8 +33,9 @@ class ProtocolGoldenTest {
         "valid-heartbeat",
         "valid-presence",
         "valid-activity",
-        "valid-manual",
-        "valid-manual-indefinite",
+        "valid-custom-mood",
+        "valid-custom-persona",
+        "valid-custom-reading",
         "valid-location-city",
         "valid-location-district",
         "valid-device",
@@ -76,21 +80,31 @@ class ProtocolGoldenTest {
     }
 
     @Test
-    fun `manual clear omits false and fields match go omitempty`() {
-        val ev = Wire.manualEvent(seq = 1, nowMs = 0, data = moe.snowy.haruka.protocol.ManualData(clear = true))
+    fun `custom clear payload omits nothing and matches plugin contract`() {
+        val ev = Wire.customEvent(seq = 1, nowMs = 0, data = moe.snowy.haruka.protocol.CustomData("mood", moodClearPayload()))
         val obj = ev.data.jsonObject
-        assertEquals(JsonPrimitive(true), obj["clear"])
-        assertNull(obj["mood"])
-        assertNull(obj["text"])
+        assertEquals(JsonPrimitive("mood"), obj["source"])
+        assertEquals(JsonPrimitive(true), obj["payload"]!!.jsonObject["clear"])
     }
 
     @Test
-    fun `manual without until omits until key for indefinite status`() {
-        val ev = Wire.manualEvent(seq = 1, nowMs = 0, data = moe.snowy.haruka.protocol.ManualData(mood = "真冬", text = null, until = null))
+    fun `mood payload without until omits until key for indefinite mood`() {
+        val ev = Wire.customEvent(seq = 1, nowMs = 0, data = moe.snowy.haruka.protocol.CustomData("mood", moodPayload("tired", null, null)))
+        val payload = ev.data.jsonObject["payload"]!!.jsonObject
+        assertEquals(JsonPrimitive("tired"), payload["mood"])
+        assertNull(payload["until"], "无限期情绪不得携带 until 键")
+        assertNull(payload["clear"])
+    }
+
+    @Test
+    fun `persona payload has no until and matches plugin contract`() {
+        val ev = Wire.customEvent(seq = 1, nowMs = 0, data = moe.snowy.haruka.protocol.CustomData("persona", personaPayload("真冬", "安静一会儿")))
         val obj = ev.data.jsonObject
-        assertEquals(JsonPrimitive("真冬"), obj["mood"])
-        assertNull(obj["until"], "无限期状态不得携带 until 键")
-        assertNull(obj["clear"])
+        assertEquals(JsonPrimitive("persona"), obj["source"])
+        val payload = obj["payload"]!!.jsonObject
+        assertEquals(JsonPrimitive("真冬"), payload["persona"])
+        assertEquals(JsonPrimitive("安静一会儿"), payload["text"])
+        assertNull(payload["until"], "人格是无限期接管，不得携带 until 键")
     }
 
     private fun JsonObject.stripNulls(): JsonElement = JsonObject(

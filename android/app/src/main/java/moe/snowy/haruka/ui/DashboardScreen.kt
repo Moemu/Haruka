@@ -174,8 +174,14 @@ private fun SnapshotPreviewCard(snapshot: PublicSnapshot?) {
                     snapshot.activity?.display?.takeIf { it.isNotBlank() }?.let {
                         Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                    // 人格（persona 插件）：当前接管者或默认人格；default 标注来源。
+                    snapshot.persona?.persona?.takeIf { it.isNotBlank() }?.let { name ->
+                        val suffix = if (snapshot.persona?.default == true) "（默认）" else ""
+                        val parts = listOfNotNull(name + suffix, snapshot.persona?.text?.takeIf { t -> t.isNotBlank() })
+                        Text("🎭 " + parts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
+                    }
                     snapshot.mood?.let { m ->
-                        // 种子词映射中文，自定义状态词（人格名）原样展示。
+                        // 种子词映射中文；未知情绪词原样展示。
                         val label = moodLabel(m.mood.orEmpty()) ?: m.mood?.takeIf { it.isNotBlank() }
                         val parts = listOfNotNull(label, m.text?.takeIf { t -> t.isNotBlank() })
                         if (parts.isNotEmpty()) {

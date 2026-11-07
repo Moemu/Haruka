@@ -8,8 +8,8 @@
       "id": "e_4f1e2d3c4b5a69788796a5b4c3d2e1f0",
       "seq": 911,
       "ts": "2026-10-03T13:59:44Z",
-      "type": "manual",
-      "data": { "mood": "focused", "text": "赶 deadline 中", "until": "2026-10-03T18:00:00Z" }
+      "type": "custom",
+      "data": { "source": "mood", "payload": { "mood": "focused", "text": "赶 deadline 中", "until": "2026-10-03T18:00:00Z" } }
     }
   ]
 }

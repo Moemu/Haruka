@@ -77,15 +77,6 @@ var migrations = []string{
 		expires_at TEXT NOT NULL,
 		PRIMARY KEY (device_id, type)
 	)`,
-	`CREATE TABLE IF NOT EXISTS manual_state (
-		id INTEGER PRIMARY KEY CHECK (id = 1),
-		updated_ts TEXT NOT NULL,
-		cleared INTEGER NOT NULL DEFAULT 1,
-		cleared_ts TEXT,
-		data TEXT,
-		until TEXT
-	)`,
-	`INSERT OR IGNORE INTO manual_state (id, updated_ts, cleared) VALUES (1, '1970-01-01T00:00:00Z', 1)`,
 	`CREATE TABLE IF NOT EXISTS server_state (
 		key TEXT PRIMARY KEY,
 		value TEXT NOT NULL

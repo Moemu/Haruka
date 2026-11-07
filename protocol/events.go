@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"regexp"
 	"time"
 )
 
@@ -20,7 +21,7 @@ const (
 	TypePresence  = "presence"
 	TypeActivity  = "activity"
 	TypeLocation  = "location"
-	TypeManual    = "manual"
+	TypeCustom    = "custom"
 	TypeDevice    = "device"
 
 	StateActive = "active"
@@ -89,12 +90,19 @@ type LocationData struct {
 	Zone      string `json:"zone,omitempty"`
 }
 
-type ManualData struct {
-	Mood  string `json:"mood,omitempty"`
-	Text  string `json:"text,omitempty"`
-	Until string `json:"until,omitempty"`
-	Clear bool   `json:"clear,omitempty"`
+// CustomData 是插件数据的统一信封（设计案 §7.7 端口 1）：核心只验 source
+// 形态与 payload 结构（JSON 对象 ≤2KB），语义由订阅同名 source 的插件定义。
+// source 与插件名同一身份规则（ValidSource）。
+type CustomData struct {
+	Source  string          `json:"source"`
+	Payload json.RawMessage `json:"payload"`
 }
+
+// SourcePattern 是 custom source / 插件名的统一身份规则。
+var SourcePattern = regexp.MustCompile(`^[a-z0-9_-]{1,32}$`)
+
+// ValidSource 报告 source 是否满足统一身份规则。
+func ValidSource(s string) bool { return SourcePattern.MatchString(s) }
 
 // NewEvent 以 UTC RFC3339 生成观测事件。data 必须是本包定义的负载类型。
 func NewEvent(typ string, seq uint64, at time.Time, data any) (Event, error) {

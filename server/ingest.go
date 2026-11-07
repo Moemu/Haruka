@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"haruka/internal/host"
 	"haruka/protocol"
 )
 
@@ -77,10 +78,10 @@ func canonicalEventData(ev *protocol.Event) error {
 		data = &protocol.ActivityData{}
 	case protocol.TypeLocation:
 		data = &protocol.LocationData{}
-	case protocol.TypeManual:
-		data = &protocol.ManualData{}
 	case protocol.TypeDevice:
 		data = &protocol.DeviceData{}
+	case protocol.TypeCustom:
+		return canonicalCustomData(ev)
 	default:
 		return errValidation
 	}
@@ -90,6 +91,29 @@ func canonicalEventData(ev *protocol.Event) error {
 	raw, err := json.Marshal(data)
 	ev.Data = raw
 	return err
+}
+
+// canonicalCustomData 规范化插件 payload（键排序、消重），core 只认信封不认语义。
+func canonicalCustomData(ev *protocol.Event) error {
+	var d protocol.CustomData
+	if err := decodeStrict(ev.Data, &d); err != nil {
+		return err
+	}
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(d.Payload, &obj); err != nil || obj == nil {
+		return fmt.Errorf("%w: custom.payload 必须为 JSON 对象", errValidation)
+	}
+	norm, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+	d.Payload = norm
+	raw, err := json.Marshal(d)
+	if err != nil {
+		return err
+	}
+	ev.Data = raw
+	return nil
 }
 
 func validateEvent(ev *protocol.Event) error {
@@ -203,26 +227,20 @@ func validateEvent(ev *protocol.Event) error {
 			}
 		}
 		return nil
-	case protocol.TypeManual:
-		var d protocol.ManualData
+	case protocol.TypeCustom:
+		var d protocol.CustomData
 		if err := decodeStrict(ev.Data, &d); err != nil {
 			return err
 		}
-		// mood 是自定义状态词（如人格名），只做展示安全形状校验，不做封闭枚举。
-		if err := checkDisplayString("mood", d.Mood, 16); err != nil {
-			return err
+		if !protocol.ValidSource(d.Source) {
+			return fmt.Errorf("%w: custom.source 非法（须匹配 [a-z0-9_-]{1,32}）", errValidation)
 		}
-		// 手动文本：码点 ≤60、字节 ≤240 兜底；坐标与 URL 模式拒收（设计案 11 节）。
-		if len([]rune(d.Text)) > 60 || len(d.Text) > 240 {
-			return fmt.Errorf("%w: text 超长", errValidation)
+		if len(d.Payload) > customPayloadMaxBytes {
+			return fmt.Errorf("%w: custom.payload 超过 %d 字节", errValidation, customPayloadMaxBytes)
 		}
-		if err := checkDisplayString("text", d.Text, 60); err != nil {
-			return err
-		}
-		if d.Until != "" {
-			if _, err := parseTime(d.Until); err != nil {
-				return fmt.Errorf("%w: until 非 RFC3339", errValidation)
-			}
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(d.Payload, &obj); err != nil || obj == nil {
+			return fmt.Errorf("%w: custom.payload 必须为 JSON 对象", errValidation)
 		}
 		return nil
 	case protocol.TypeDevice:
@@ -253,6 +271,9 @@ func decodeStrict(raw []byte, out any) error {
 	}
 	return nil
 }
+
+// customPayloadMaxBytes 是插件 payload 的信封级上限；语义层校验归插件。
+const customPayloadMaxBytes = 2048
 
 // checkDisplayString 校验可展示字符串（project 与 manual.text 共用的底线规则）。
 // 规则实现在 protocol.CheckDisplayString，采集端配置预检共用同一口径。
@@ -349,8 +370,8 @@ func (e *Engine) IngestEnvelope(device Device, clientIP net.IP, env *protocol.En
 			if err := applyHeartbeat(tx, device, receivedAt); err != nil {
 				return 0, err
 			}
-		case protocol.TypeManual:
-			if err := e.applyManual(tx, device, ev, receivedAt); err != nil {
+		case protocol.TypeCustom:
+			if err := e.applyCustom(tx, device, ev, receivedAt); err != nil {
 				return 0, err
 			}
 		default: // presence / activity / device
@@ -359,7 +380,7 @@ func (e *Engine) IngestEnvelope(device Device, clientIP net.IP, env *protocol.En
 				// 「关闭定位」由服务端强制执行，不依赖客户端自觉）。
 				continue
 			}
-			if err := e.applyObservation(tx, device, ev, receivedAt); err != nil {
+			if err := e.applyObservation(tx, device, ev, receivedAt, ev.Type, observationTTL(device, ev.Type)); err != nil {
 				return 0, err
 			}
 		}
@@ -408,7 +429,8 @@ func applyHeartbeat(tx *sql.Tx, device Device, receivedAt time.Time) error {
 }
 
 // applyObservation 实现设计案 5.3 节第 2 条：新鲜度窗口 + resume_at 边界 + 乱序保护。
-func (e *Engine) applyObservation(tx *sql.Tx, device Device, ev *protocol.Event, receivedAt time.Time) error {
+// stateType/ttl 参数化以复用于 custom 观测（type = "custom:"+source）。
+func (e *Engine) applyObservation(tx *sql.Tx, device Device, ev *protocol.Event, receivedAt time.Time, stateType string, ttl time.Duration) error {
 	ts, err := parseTime(ev.TS)
 	if err != nil {
 		return err
@@ -417,7 +439,7 @@ func (e *Engine) applyObservation(tx *sql.Tx, device Device, ev *protocol.Event,
 	lag := receivedAt.Sub(ts)
 	future := ts.Sub(receivedAt)
 	if lag > e.rt.FreshnessLag || future > e.rt.FutureTolerance {
-		e.log.Debug("历史补报只入库", "device", device.ID, "type", ev.Type, "lag", lag)
+		e.log.Debug("历史补报只入库", "device", device.ID, "type", stateType, "lag", lag)
 		return nil
 	}
 
@@ -427,11 +449,11 @@ func (e *Engine) applyObservation(tx *sql.Tx, device Device, ev *protocol.Event,
 	}
 	if !ts.After(resumeAt) {
 		// 隐身恢复边界：边界之前的观测一律不得刷新实时态（设计案 6.4 节）。
-		e.log.Debug("恢复边界之前的观测只入库", "device", device.ID, "type", ev.Type, "ts", ev.TS)
+		e.log.Debug("恢复边界之前的观测只入库", "device", device.ID, "type", stateType, "ts", ev.TS)
 		return nil
 	}
 
-	current, err := currentState(tx, device.ID, ev.Type)
+	current, err := currentState(tx, device.ID, stateType)
 	if err != nil {
 		return err
 	}
@@ -439,17 +461,30 @@ func (e *Engine) applyObservation(tx *sql.Tx, device Device, ev *protocol.Event,
 		return nil
 	}
 
-	ttl := observationTTL(device, ev.Type)
-	return upsertState(tx, device.ID, ev.Type, json.RawMessage(ev.Data), ts, ev.Seq, receivedAt, ts.Add(ttl))
+	return upsertState(tx, device.ID, stateType, json.RawMessage(ev.Data), ts, ev.Seq, receivedAt, ts.Add(ttl))
 }
 
-// applyManual 实现设计案 5.3 节第 4 条：手动状态是用户操作，不受新鲜度窗口
-// 限制，但受 resume_at 边界约束；全局 (ts, seq) 排序，同秒清除优先，清除写墓碑。
-func (e *Engine) applyManual(tx *sql.Tx, device Device, ev *protocol.Event, receivedAt time.Time) error {
+// customObservationTTL 是 custom 观测的通用实时态寿命（声明型插件据此展示
+// 新鲜度；数据要更久就由来源程序续推）。固定值避免为没人调的参数开配置。
+const customObservationTTL = 30 * time.Minute
+
+// applyCustom 处理插件数据：通用观测存储 + 事务内派发给订阅插件。
+// 隐私边界（resume_at）与时钟护栏由核心统一执行；payload 语义归插件。
+func (e *Engine) applyCustom(tx *sql.Tx, device Device, ev *protocol.Event, receivedAt time.Time) error {
+	var d protocol.CustomData
+	if err := json.Unmarshal(ev.Data, &d); err != nil {
+		return err
+	}
 	ts, err := parseTime(ev.TS)
 	if err != nil {
 		return err
 	}
+	if err := e.applyObservation(tx, device, ev, receivedAt, "custom:"+d.Source, customObservationTTL); err != nil {
+		return err
+	}
+
+	// 派发：用户操作类事件不受新鲜度窗口限制（与原 manual 一致），
+	// 但必须晚于恢复边界且未明显来自未来时钟。
 	if ts.Sub(receivedAt) > e.rt.FutureTolerance {
 		return nil
 	}
@@ -460,59 +495,28 @@ func (e *Engine) applyManual(tx *sql.Tx, device Device, ev *protocol.Event, rece
 	if !ts.After(resumeAt) {
 		return nil
 	}
-
-	var data protocol.ManualData
-	if err := json.Unmarshal(ev.Data, &data); err != nil {
-		return err
+	delivered := host.Delivered{
+		DeviceID: device.ID, TS: ts, ReceivedAt: receivedAt,
+		Source: d.Source, Payload: json.RawMessage(d.Payload),
 	}
-
-	var updatedTS string
-	var cleared bool
-	var clearedTS sql.NullString
-	err = tx.QueryRow(`SELECT updated_ts, cleared, cleared_ts FROM manual_state WHERE id = 1`).
-		Scan(&updatedTS, &cleared, &clearedTS)
-	if err != nil {
-		return err
-	}
-	curTS, _ := parseTime(updatedTS)
-
-	if data.Clear {
-		// 同秒时清除优先：>=。
-		if ts.After(curTS) || ts.Equal(curTS) {
-			_, err = tx.Exec(`UPDATE manual_state SET updated_ts = ?, cleared = 1, cleared_ts = ?, data = NULL, until = NULL WHERE id = 1`,
-				ev.TS, ev.TS)
-		}
-		return err
-	}
-
-	// 墓碑：ts ≤ cleared_ts 的设置不生效。
-	if cleared && clearedTS.Valid {
-		if tomb, err2 := parseTime(clearedTS.String); err2 == nil && !ts.After(tomb) {
-			return nil
+	for _, h := range e.eventHandlers {
+		for _, s := range h.Sources() {
+			if s == d.Source {
+				if err := h.HandleEvent(delivered, tx); err != nil {
+					// 插件校验错误 = 事件拒收，原样反馈到上报端。
+					return fmt.Errorf("%w: %v", errValidation, err)
+				}
+			}
 		}
 	}
-	if !ts.After(curTS) {
-		return nil // 同秒或更旧：设置让位于已有状态
-	}
-
-	// until 缺席 = 无限期（接管时长不确定），DB 存 NULL；带期限状态照旧。
-	var until sql.NullString
-	if data.Until != "" {
-		u, err := parseTime(data.Until)
-		if err != nil {
-			return err
-		}
-		until = sql.NullString{String: formatTime(u), Valid: true}
-	}
-	_, err = tx.Exec(`UPDATE manual_state SET updated_ts = ?, cleared = 0, cleared_ts = NULL, data = ?, until = ? WHERE id = 1`,
-		ev.TS, string(ev.Data), until)
-	return err
+	return nil
 }
 
 // --- 控制操作 ---
 
-// Hide 置隐身（可带期限）：同一事务内更新可见性、清空 location/activity 实时态、
-// 手动状态写墓碑（设计案 6.4 节）。
+// Hide 置隐身（可带期限）：同一事务内更新可见性、清空 location/activity 实时态。
+// 插件的用户声明态不清除——隐身只是「现在不展示」，解除后照常回来
+// （语义变更自 manual 时代，见设计案 6.4 节）。
 func (e *Engine) Hide(until *time.Time) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -537,10 +541,6 @@ func (e *Engine) Hide(until *time.Time) error {
 	}
 	if _, err := tx.Exec(`DELETE FROM current_state WHERE type IN (?, ?, ?)`,
 		protocol.TypeLocation, protocol.TypeActivity, protocol.TypeDevice); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(`UPDATE manual_state SET cleared = 1, cleared_ts = ?, data = NULL, until = NULL WHERE id = 1`,
-		formatTime(now)); err != nil {
 		return err
 	}
 	return tx.Commit()

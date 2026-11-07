@@ -171,10 +171,10 @@ func loadDatav(dir string) (provinces, cities map[int64]datavEntry, districts []
 	files, _ := filepath.Glob(filepath.Join(dir, "*.json"))
 	sort.Strings(files)
 	type rawProps struct {
-		Name    string   `json:"name"`
-		Adcode  flexInt  `json:"adcode"`
-		Level   string   `json:"level"`
-		Parent  struct {
+		Name   string  `json:"name"`
+		Adcode flexInt `json:"adcode"`
+		Level  string  `json:"level"`
+		Parent struct {
 			Adcode flexInt `json:"adcode"`
 		} `json:"parent"`
 		Center []float64 `json:"center"`

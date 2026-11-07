@@ -9,7 +9,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import moe.snowy.haruka.protocol.VALID_MOODS
 
 private val Context.dataStore by preferencesDataStore(name = "haruka_settings")
 
@@ -34,11 +33,13 @@ data class Settings(
     val lastActiveMs: Long = 0,
     val manualMood: String = "",
     val manualText: String = "",
-    /** 0 = 无限期（人格接管时长不确定），仅 manualCleared 为 false 时生效。 */
+    /** 0 = 无限期（情绪「长期」档），仅 manualCleared 为 false 时生效。 */
     val manualUntilMs: Long = 0,
     val manualCleared: Boolean = true,
-    /** 手动状态词表（换行拼接保序）；空回落 VALID_MOODS 种子。 */
-    val manualMoods: List<String> = VALID_MOODS,
+    /** 人格本地镜像（persona 插件；权威在服务端配置列表与接管态）。 */
+    val personaName: String = "",
+    val personaText: String = "",
+    val personaCleared: Boolean = true,
     /** 待确认的控制操作：格式 "hide|<untilRfc3339>" 或 "show|"，上线后由服务节拍补发。 */
     val pendingControl: String = "",
     /**
@@ -73,7 +74,9 @@ class SettingsRepository(private val context: Context) {
         val manualText = stringPreferencesKey("manual_text")
         val manualUntil = longPreferencesKey("manual_until_ms")
         val manualCleared = androidx.datastore.preferences.core.booleanPreferencesKey("manual_cleared")
-        val manualMoods = stringPreferencesKey("manual_moods")
+        val personaName = stringPreferencesKey("persona_name")
+        val personaText = stringPreferencesKey("persona_text")
+        val personaCleared = androidx.datastore.preferences.core.booleanPreferencesKey("persona_cleared")
         val pendingControl = stringPreferencesKey("pending_control")
         val serviceEnabled = androidx.datastore.preferences.core.booleanPreferencesKey("service_enabled")
         val activityEnabled = androidx.datastore.preferences.core.booleanPreferencesKey("activity_enabled")
@@ -96,7 +99,9 @@ class SettingsRepository(private val context: Context) {
             manualText = p[K.manualText] ?: "",
             manualUntilMs = p[K.manualUntil] ?: 0,
             manualCleared = p[K.manualCleared] ?: true,
-            manualMoods = p[K.manualMoods]?.takeIf { it.isNotBlank() }?.split('\n') ?: VALID_MOODS,
+            personaName = p[K.personaName] ?: "",
+            personaText = p[K.personaText] ?: "",
+            personaCleared = p[K.personaCleared] ?: true,
             pendingControl = p[K.pendingControl] ?: "",
             serviceEnabled = p[K.serviceEnabled] ?: true,
             activityEnabled = p[K.activityEnabled] ?: false,
@@ -147,13 +152,16 @@ class SettingsRepository(private val context: Context) {
     }
 
     /** 新状态词入表（去重追加）；词表无删除入口，脏了改存储或重装。 */
-    suspend fun addManualMood(word: String) {
-        if (current().manualMoods.contains(word)) return
-        context.dataStore.edit {
-            val cur = it[K.manualMoods]?.takeIf { v -> v.isNotBlank() }
-                ?: VALID_MOODS.joinToString("\n")
-            it[K.manualMoods] = cur + "\n" + word
-        }
+    suspend fun setPersona(name: String, text: String) = context.dataStore.edit {
+        it[K.personaName] = name
+        it[K.personaText] = text
+        it[K.personaCleared] = false
+    }
+
+    suspend fun setPersonaCleared() = context.dataStore.edit {
+        it[K.personaName] = ""
+        it[K.personaText] = ""
+        it[K.personaCleared] = true
     }
 
     suspend fun setPendingControl(v: String?) = context.dataStore.edit {

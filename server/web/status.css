@@ -142,12 +142,14 @@ body::before {
 /* 卡片（bento 网格）：1px 细边、紧圆角、无阴影 */
 .cards {
   display: grid;
-  /* minmax(0,1fr)：轨道纯按页面宽度等分，内容再长也只换行、不挤宽轨道 */
+  /* minmax(0,1fr)：轨道纯按页面宽度等分，内容再长也只换行、不挤宽轨道。
+     data-cols 由 JS 按可见卡数写入（2/3 列取最小空槽，见 status.js） */
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   padding: 8px 0 8px;
 }
-.card-wide { grid-column: span 2; }
+.cards[data-cols="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.card-wide { grid-column: 1 / -1; } /* 设备宽卡恒整行：卡数可变时不留尾槽 */
 .card {
   display: flex;
   flex-direction: column; /* 正文垂直居中、asof 钉底，见下 */
@@ -329,7 +331,7 @@ body.mode-hidden #page-hidden {
       url("/bg-mobile.webp") center / cover no-repeat;
   }
   .hero { padding: 40px 0 36px; }
-  .cards { grid-template-columns: minmax(0, 1fr); }
+  .cards, .cards[data-cols] { grid-template-columns: minmax(0, 1fr); }
   .card-wide { grid-column: auto; }
   .week { gap: 16px; }
 }

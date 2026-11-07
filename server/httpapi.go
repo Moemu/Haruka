@@ -469,6 +469,11 @@ func (e *Engine) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 		if d, ok := p.(host.Describer); ok {
 			cp.Descriptor = d.Describe()
 		}
+		// 快照节键以 Contributor 声明为准（编译型插件可与插件名不同，
+		// 如 wakatime → coding），前端据此对表，无第二份映射。
+		if c, ok := p.(host.Contributor); ok {
+			cp.Descriptor.SnapshotKey = c.SnapshotKey()
+		}
 		if !authed {
 			cp.Descriptor.Choices = nil
 			cp.Descriptor.Settings = nil

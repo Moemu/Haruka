@@ -92,15 +92,16 @@ type Field struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
-// Descriptor 是 capabilities 清单里的插件描述。Title/Icon/Fields 公开
-// （状态页渲染所需最少信息）；Choices/Settings 是私有槽位，仅在携带
-// 设备/owner 令牌时输出。
+// Descriptor 是 capabilities 清单里的插件描述。Title/Icon/Fields/SnapshotKey
+// 公开（状态页渲染所需最少信息；SnapshotKey 是其快照顶层节键，可与插件名
+// 不同）；Choices/Settings 是私有槽位，仅在携带设备/owner 令牌时输出。
 type Descriptor struct {
-	Title    string   `json:"title,omitempty"`
-	Icon     string   `json:"icon,omitempty"`
-	Fields   []Field  `json:"fields,omitempty"`
-	Choices  []string `json:"choices,omitempty"`
-	Settings any      `json:"settings,omitempty"`
+	Title       string   `json:"title,omitempty"`
+	Icon        string   `json:"icon,omitempty"`
+	SnapshotKey string   `json:"snapshot_key,omitempty"`
+	Fields      []Field  `json:"fields,omitempty"`
+	Choices     []string `json:"choices,omitempty"`
+	Settings    any      `json:"settings,omitempty"`
 }
 
 // Describer 由参与 capabilities 清单的插件实现。

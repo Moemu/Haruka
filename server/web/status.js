@@ -20,6 +20,7 @@
     locationText: $("location-text"),
     locationAsof: $("location-asof"),
     pluginCards: $("plugin-cards"),
+    cardsGrid: document.querySelector(".cards"),
     cardDevices: $("card-devices"),
     devicesList: $("devices-list"),
     footerSync: $("footer-sync"),
@@ -237,6 +238,8 @@
     els.cardDevices.hidden = devs.length === 0;
     devs.forEach(function (d) { els.devicesList.appendChild(deviceRow(d)); });
 
+    adaptColumns();
+
     var gen = new Date(snap.generated_at);
     els.footerSync.textContent = "数据时间 " +
       (isNaN(gen.getTime()) ? "" : gen.toLocaleTimeString("zh-CN", { hour12: false })) +
@@ -315,7 +318,8 @@
     manifest.forEach(function (p) {
       var refs = pluginRefs[p.name];
       if (!refs) { return; }
-      var sec = snap[p.name];
+      // 快照节键 = 清单 snapshot_key（编译型插件可与插件名不同），缺省同名。
+      var sec = snap[p.snapshot_key || p.name];
       if (!sec) { refs.card.hidden = true; return; }
       refs.card.hidden = false;
       if (CARD_RENDERERS[p.name]) { CARD_RENDERERS[p.name](sec, refs); return; }
@@ -324,7 +328,9 @@
         if (i === 0) {
           refs.body.textContent = text || "—";
         } else {
-          refs.subs[i - 1].textContent = f.label ? f.label + "：" + text : text;
+          var line = f.label ? f.label + "：" + text : text;
+          refs.subs[i - 1].textContent = line;
+          refs.subs[i - 1].hidden = line === ""; // 空值字段不出行（如未填附言）
         }
       });
       refs.asof.textContent = sec.as_of ? rel(sec.as_of) : "";
@@ -341,6 +347,19 @@
         if (lastSnap) { render(lastSnap); }
       })
       .catch(function () { manifest = []; });
+  }
+
+  // 卡片数自适应：可见小卡数 S 对 2/3 列各算空槽（(C - S%C) % C，设备宽卡
+  // 恒整行不产生空槽），取最小、并列保三列节奏；移动端单列由媒体查询覆盖。
+  function adaptColumns() {
+    var small = 2; // activity + location 恒显
+    manifest.forEach(function (p) {
+      var refs = pluginRefs[p.name];
+      if (refs && !refs.card.hidden) { small++; }
+    });
+    var gaps2 = (2 - (small % 2)) % 2;
+    var gaps3 = (3 - (small % 3)) % 3;
+    els.cardsGrid.dataset.cols = gaps2 < gaps3 ? "2" : "3";
   }
 
   function renderError(kind, snap) {    if (kind === "loading") {

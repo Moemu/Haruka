@@ -328,9 +328,8 @@
         if (i === 0) {
           refs.body.textContent = text || "—";
         } else {
-          var line = f.label ? f.label + "：" + text : text;
-          refs.subs[i - 1].textContent = line;
-          refs.subs[i - 1].hidden = line === ""; // 空值字段不出行（如未填附言）
+          refs.subs[i - 1].textContent = f.label ? f.label + "：" + text : text;
+          refs.subs[i - 1].hidden = text === ""; // 按字段值判空：有标签也不能出「标签：」空行
         }
       });
       refs.asof.textContent = sec.as_of ? rel(sec.as_of) : "";

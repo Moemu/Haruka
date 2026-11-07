@@ -180,7 +180,11 @@
   }
 
   function mode(name) {
-    document.body.className = "mode-" + name;
+    // 只增删 mode-* 类：compact 等其他 body 类（视口预算态）不能被抹掉
+    ["mode-loading", "mode-normal", "mode-hidden", "mode-error"].forEach(function (m) {
+      document.body.classList.remove(m);
+    });
+    document.body.classList.add("mode-" + name);
   }
 
   // 页脚星期行：当天高亮，全页唯一的幽默位。
@@ -239,6 +243,7 @@
     devs.forEach(function (d) { els.devicesList.appendChild(deviceRow(d)); });
 
     adaptColumns();
+    fitViewport();
 
     var gen = new Date(snap.generated_at);
     els.footerSync.textContent = "数据时间 " +
@@ -361,6 +366,16 @@
     els.cardsGrid.dataset.cols = gaps2 < gaps3 ? "2" : "3";
   }
 
+  // 视口预算态：卡行数随插件数量可变，内容总高超视口时切 body.compact
+  // （.cards 行均分剩余高度、排版按 vh 收缩），整页无滚动展示。
+  // 每轮先摘掉再量：卡数减少后要能退回常规构图居中态。
+  function fitViewport() {
+    document.body.classList.remove("compact");
+    if (document.documentElement.scrollHeight > innerHeight + 1) {
+      document.body.classList.add("compact");
+    }
+  }
+
   function renderError(kind, snap) {    if (kind === "loading") {
       els.errorTitle.textContent = "正在连接…";
       els.errorBody.textContent = "正在获取最新状态。";
@@ -407,6 +422,7 @@
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) { stop(); } else { start(); }
   });
+  addEventListener("resize", fitViewport);
 
   markToday();
   renderError("loading");

@@ -1,5 +1,5 @@
-/* Haruka 状态页 — 纸面极简：纸白底、墨色字、单一 accent、数据当主角。
-   层级靠字重与字号对比，颜色只留给状态与数据。零外部依赖。 */
+/* Haruka ç¶æé¡µ â çº¸é¢æç®ï¼çº¸ç½åºãå¢¨è²å­ãåä¸ accentãæ°æ®å½ä¸»è§ã
+   å±çº§é å­éä¸å­å·å¯¹æ¯ï¼é¢è²åªçç»ç¶æä¸æ°æ®ãé¶å¤é¨ä¾èµã */
 
 :root {
   --bg: #FAFAF8;
@@ -7,11 +7,11 @@
   --card-border: #E8E7E3;
   --ink: #1F2430;
   --muted: #8A8F9B;
-  --accent: #D4708F;   /* 唯一 accent：星期高亮、低电量 */
-  --ok: #2FA46E;       /* 在线、充电、正常电量 */
-  --warn: #C99013;     /* 离开 */
-  --unsure: #8B7FD4;   /* 状态未知 */
-  --track: #EFEEEA;    /* 电量环轨道、chip 底 */
+  --accent: #D4708F;   /* å¯ä¸ accentï¼ææé«äº®ãä½çµé */
+  --ok: #2FA46E;       /* å¨çº¿ãåçµãæ­£å¸¸çµé */
+  --warn: #C99013;     /* ç¦»å¼ */
+  --unsure: #8B7FD4;   /* ç¶ææªç¥ */
+  --track: #EFEEEA;    /* çµéç¯è½¨éãchip åº */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -35,7 +35,7 @@ body {
   margin: 0;
   min-height: 100vh;
   display: flex;
-  flex-direction: column; /* .wrap 用 margin:auto 在视口内垂直居中；内容超高时退化为自然滚动 */
+  flex-direction: column; /* .wrap ç¨ margin:auto å¨è§å£ååç´å±ä¸­ï¼åå®¹è¶é«æ¶éåä¸ºèªç¶æ»å¨ */
   background: var(--bg);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
@@ -43,7 +43,7 @@ body {
   line-height: 1.6;
 }
 
-/* 壁纸层：PC/手机两档素材 + 主题色薄纱保证可读；position:fixed 即视差固定 */
+/* å£çº¸å±ï¼PC/ææºä¸¤æ¡£ç´ æ + ä¸»é¢è²èçº±ä¿è¯å¯è¯»ï¼position:fixed å³è§å·®åºå® */
 body::before {
   content: "";
   position: fixed;
@@ -55,15 +55,15 @@ body::before {
 }
 
 .wrap {
-  /* width 定死为视口宽：flex 子项横向 auto 边距会禁用 stretch，缺了它
-     版心会退化成内容自然宽度，卡片跟着内容而不是页面大小变宽窄 */
+  /* width å®æ­»ä¸ºè§å£å®½ï¼flex å­é¡¹æ¨ªå auto è¾¹è·ä¼ç¦ç¨ stretchï¼ç¼ºäºå®
+     çå¿ä¼éåæåå®¹èªç¶å®½åº¦ï¼å¡çè·çåå®¹èä¸æ¯é¡µé¢å¤§å°åå®½çª */
   width: 100%;
   max-width: 880px;
-  margin: auto; /* 弹性列内四向居中：高分辨率下内容块在壁纸中构图居中 */
+  margin: auto; /* å¼¹æ§ååååå±ä¸­ï¼é«åè¾¨çä¸åå®¹åå¨å£çº¸ä¸­æå¾å±ä¸­ */
   padding: 24px 24px 32px;
 }
 
-/* 页头 */
+/* é¡µå¤´ */
 .site-head {
   display: flex;
   align-items: baseline;
@@ -86,7 +86,7 @@ body::before {
   object-fit: cover;
 }
 
-/* Hero：大字状态词 + 观测 meta，纯排版。纵向收紧保证桌面端整页免滚动 */
+/* Heroï¼å¤§å­ç¶æè¯ + è§æµ metaï¼çº¯æçãçºµåæ¶ç´§ä¿è¯æ¡é¢ç«¯æ´é¡µåæ»å¨ */
 .hero { padding: 36px 0 32px; }
 .hero-label {
   margin: 0 0 10px;
@@ -107,12 +107,12 @@ body::before {
 }
 .hero-meta { margin: 0; color: var(--muted); font-size: 1rem; }
 
-/* 直接坐在壁纸上的文字（无卡片保护）：底色晕影保证可读 */
+/* ç´æ¥åå¨å£çº¸ä¸çæå­ï¼æ å¡çä¿æ¤ï¼ï¼åºè²æå½±ä¿è¯å¯è¯» */
 .hero-label, .hero-meta, .site-foot {
   text-shadow: 0 1px 6px var(--bg), 0 0 16px var(--bg);
 }
 
-/* presence 呼吸点 */
+/* presence å¼å¸ç¹ */
 .dot {
   flex: none;
   width: 14px;
@@ -139,20 +139,20 @@ body::before {
   50% { transform: scale(1.18); }
 }
 
-/* 卡片（bento 网格）：1px 细边、紧圆角、无阴影 */
+/* å¡çï¼bento ç½æ ¼ï¼ï¼1px ç»è¾¹ãç´§åè§ãæ é´å½± */
 .cards {
   display: grid;
-  /* minmax(0,1fr)：轨道纯按页面宽度等分，内容再长也只换行、不挤宽轨道。
-     data-cols 由 JS 按可见卡数写入（2/3 列取最小空槽，见 status.js） */
+  /* minmax(0,1fr)ï¼è½¨éçº¯æé¡µé¢å®½åº¦ç­åï¼åå®¹åé¿ä¹åªæ¢è¡ãä¸æ¤å®½è½¨éã
+     data-cols ç± JS æå¯è§å¡æ°åå¥ï¼2/3 ååæå°ç©ºæ§½ï¼è§ status.jsï¼ */
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   padding: 8px 0 8px;
 }
 .cards[data-cols="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.card-wide { grid-column: 1 / -1; } /* 设备宽卡恒整行：卡数可变时不留尾槽 */
+.card-wide { grid-column: 1 / -1; } /* è®¾å¤å®½å¡ææ´è¡ï¼å¡æ°å¯åæ¶ä¸çå°¾æ§½ */
 .card {
   display: flex;
-  flex-direction: column; /* 正文垂直居中、asof 钉底，见下 */
+  flex-direction: column; /* æ­£æåç´å±ä¸­ãasof éåºï¼è§ä¸ */
   background: color-mix(in srgb, var(--card) 68%, transparent);
   border: 1px solid color-mix(in srgb, var(--card-border) 60%, transparent);
   border-radius: 16px;
@@ -160,15 +160,15 @@ body::before {
   backdrop-filter: blur(16px) saturate(1.15);
   -webkit-backdrop-filter: blur(16px) saturate(1.15);
 }
-/* display:flex 会盖过 UA 的 [hidden]，显式补回（card-coding/devices 用它整卡隐藏） */
+/* display:flex ä¼çè¿ UA ç [hidden]ï¼æ¾å¼è¡¥åï¼card-coding/devices ç¨å®æ´å¡éèï¼ */
 .card[hidden] { display: none; }
 
-/* 毛玻璃不可用（旧浏览器/禁用 GPU）时回退不透明卡片，可读性优先 */
+/* æ¯ç»çä¸å¯ç¨ï¼æ§æµè§å¨/ç¦ç¨ GPUï¼æ¶åéä¸éæå¡çï¼å¯è¯»æ§ä¼å */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .card { background: var(--card); border-color: var(--card-border); }
 }
 
-/* 卡头是小标签，值才是主角：层级翻转 */
+/* å¡å¤´æ¯å°æ ç­¾ï¼å¼ææ¯ä¸»è§ï¼å±çº§ç¿»è½¬ */
 .card h2 {
   display: flex;
   align-items: center;
@@ -198,17 +198,17 @@ body::before {
 }
 
 .card-body {
-  /* 上下 auto 边距均分剩余空间：正文在标题与卡底之间垂直居中，
-     并把 asof 推到卡底——同排卡片高矮不一时正文与更新时间各自对齐 */
+  /* ä¸ä¸ auto è¾¹è·ååå©ä½ç©ºé´ï¼æ­£æå¨æ é¢ä¸å¡åºä¹é´åç´å±ä¸­ï¼
+     å¹¶æ asof æ¨å°å¡åºââåæå¡çé«ç®ä¸ä¸æ¶æ­£æä¸æ´æ°æ¶é´åèªå¯¹é½ */
   margin: auto 0;
   font-size: 1.15rem;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 #card-activity .card-body { font-size: 1.35rem; }
-/* 插件卡容器不占格：其内的插件卡直接参与 .cards 网格布局 */
+/* æä»¶å¡å®¹å¨ä¸å æ ¼ï¼å¶åçæä»¶å¡ç´æ¥åä¸ .cards ç½æ ¼å¸å± */
 #plugin-cards { display: contents; }
-/* 插件卡多字段行：首字段用 card-body 大字，后续字段用小一号次行 */
+/* æä»¶å¡å¤å­æ®µè¡ï¼é¦å­æ®µç¨ card-body å¤§å­ï¼åç»­å­æ®µç¨å°ä¸å·æ¬¡è¡ */
 .card-sub {
   margin: 4px 0 0;
   color: var(--muted);
@@ -217,19 +217,19 @@ body::before {
 }
 .card-asof {
   margin: 8px 0 0;
-  min-height: 1.6em; /* 空时也占一行的位置：无 asof 的卡片正文与有 asof 的对齐 */
+  min-height: 1.6em; /* ç©ºæ¶ä¹å ä¸è¡çä½ç½®ï¼æ  asof çå¡çæ­£æä¸æ asof çå¯¹é½ */
   color: var(--muted);
   font-size: 0.8rem;
 }
-.card-asof.stale::after { content: "（有点旧了）"; }
+.card-asof.stale::after { content: "ï¼æç¹æ§äºï¼"; }
 
-/* 页脚仓库链接：安静地融入同色小字，悬停才现形 */
+/* é¡µèä»åºé¾æ¥ï¼å®éå°èå¥åè²å°å­ï¼æ¬åæç°å½¢ */
 .fine a { color: inherit; text-decoration: none; }
 .fine a:hover { text-decoration: underline; }
 
-/* 设备电量环 */
+/* è®¾å¤çµéç¯ */
 .device-list {
-  margin: auto 0; /* 与 card-body 同法：卡内垂直居中 */
+  margin: auto 0; /* ä¸ card-body åæ³ï¼å¡ååç´å±ä¸­ */
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px 16px;
@@ -261,7 +261,7 @@ body::before {
   50% { opacity: 0.55; }
 }
 
-/* 独占一屏的卡片（隐身 / 不可用）：可见性由 body.mode-* 控制 */
+/* ç¬å ä¸å±çå¡çï¼éèº« / ä¸å¯ç¨ï¼ï¼å¯è§æ§ç± body.mode-* æ§å¶ */
 #page-hidden, #page-error {
   min-height: 62vh;
 }
@@ -276,7 +276,7 @@ body::before {
   margin: 0 0 10px;
 }
 
-/* 页脚：数据时间 + 星期行（当天 accent 高亮，全页唯一的幽默位） */
+/* é¡µèï¼æ°æ®æ¶é´ + ææè¡ï¼å½å¤© accent é«äº®ï¼å¨é¡µå¯ä¸çå¹½é»ä½ï¼ */
 .site-foot {
   text-align: center;
   padding: 32px 0 0;
@@ -301,7 +301,7 @@ body::before {
   padding: 40px 0;
 }
 
-/* 状态页模式切换：body.mode-* 决定三个区块谁可见（JS 全权切换） */
+/* ç¶æé¡µæ¨¡å¼åæ¢ï¼body.mode-* å³å®ä¸ä¸ªåºåè°å¯è§ï¼JS å¨æåæ¢ï¼ */
 #page-normal { display: block; }
 #page-hidden, #page-error { display: none; }
 body.mode-loading #page-normal,
@@ -317,13 +317,13 @@ body.mode-hidden #page-hidden {
   place-items: center;
 }
 
-/* 动效：仅 presence 点呼吸与充电环脉冲 */
+/* å¨æï¼ä» presence ç¹å¼å¸ä¸åçµç¯èå² */
 @media (prefers-reduced-motion: reduce) {
   .dot, .ring-arc { animation: none; }
   .ring-arc { transition: none; }
 }
 
-/* 响应式 */
+/* ååºå¼ */
 @media (max-width: 760px) {
   body::before {
     background:
@@ -336,15 +336,49 @@ body.mode-hidden #page-hidden {
   .week { gap: 16px; }
 }
 
-/* 矮视口再收一档纵向留白：桌面整页免滚动不赌内容长度（两行正文 + 多设备也放得下） */
+/* ç®è§å£åæ¶ä¸æ¡£çºµåçç½ï¼æ¡é¢æ´é¡µåæ»å¨ä¸èµåå®¹é¿åº¦ï¼ä¸¤è¡æ­£æ + å¤è®¾å¤ä¹æ¾å¾ä¸ï¼ */
 @media (max-height: 800px) {
   .wrap { padding: 20px 24px 20px; }
   .hero { padding: 24px 0 20px; }
 }
 
-/* 大屏放宽版心并整体放大一档：高分辨率下内容与壁纸比例相称。
-   与上面的矮视口修剪互斥（min-height 820 > max-height 800），互不干扰 */
+/* å¤§å±æ¾å®½çå¿å¹¶æ´ä½æ¾å¤§ä¸æ¡£ï¼é«åè¾¨çä¸åå®¹ä¸å£çº¸æ¯ä¾ç¸ç§°ã
+   ä¸ä¸é¢çç®è§å£ä¿®åªäºæ¥ï¼min-height 820 > max-height 800ï¼ï¼äºä¸å¹²æ° */
 @media (min-width: 1440px) and (min-height: 820px) {
   html { font-size: 18px; }
   .wrap { max-width: 1064px; }
 }
+
+/* ---- è§å£é¢ç®æï¼body.compactï¼JS å¨åå®¹è¶é«æ¶å¯ç¨ï¼ ----
+   å¸¸è§æç»´æåå®¹èªéåº + margin:auto æå¾å±ä¸­ï¼sess_512fa362 å®ç¨¿ï¼ï¼
+   æä»¶ååå¡è¡æ°ä¸åæä¸º 2ï¼è£ä¸ä¸æ¶åæ¬æï¼wrap å æ»¡è§å£ãå¡è¡åå
+   é¢ç®ï¼minmax(0,1fr) æ°¸ä¸æç ´ï¼ãæçé vh æ¶ç¼©ââæ´é¡µæ æ»å¨å±ç¤ºã */
+body.compact {
+  height: 100vh; /* 确定高：min-height 会让子项先按内容撑高容器，预算链失效 */
+  overflow: hidden;
+}
+body.compact .wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+  padding: 10px 24px 14px;
+}
+body.compact #page-normal {
+  flex: 1; /* 补齐预算链：wrap→page-normal→cards 逐级占满，行均分才有效 */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+body.compact .cards {
+  flex: 1;
+  min-height: 0;
+  grid-auto-rows: minmax(0, 1fr);
+}
+body.compact .card { min-height: 0; overflow: hidden; }
+body.compact .hero { padding: 10px 0 6px; }
+body.compact .hero-state { font-size: clamp(1.8rem, 5.5vh, 3.5rem); }
+body.compact .card-body { font-size: clamp(0.88rem, 2.4vh, 1.15rem); }
+body.compact .card-asof { min-height: 1.2em; }
+body.compact .site-foot { padding: 6px 0 0; }
